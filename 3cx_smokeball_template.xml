@@ -8,8 +8,8 @@
     <Parameter Name="MiddlewareServerUrl"
                Type="String"
                Editor="String"
-               Title="Middleware Server URL (e.g. http://localhost:3000/api/3cx)"
-               Default="http://localhost:3000/api/3cx" />
+               Title="Middleware Server URL (e.g. https://smokeball3cx-itt.vercel.app/api/3cx)"
+               Default="https://smokeball3cx-itt.vercel.app/api/3cx" />
   </Parameters>
   <Authentication Type="No" />
   <Scenarios>

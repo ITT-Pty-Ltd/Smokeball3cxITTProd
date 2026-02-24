@@ -14,7 +14,7 @@ class SmokeballService {
         this.apiKey = process.env.SMOKEBALL_API_KEY;
         this.apiUrl = process.env.SMOKEBALL_API_URL || 'https://stagingapi.smokeball.com.au';
         this.authUrl = process.env.SMOKEBALL_AUTH_URL || 'https://datastaging-auth.smokeball.com.au';
-        this.redirectUri = process.env.SMOKEBALL_REDIRECT_URI || 'http://localhost:3000';
+        this.redirectUri = process.env.SMOKEBALL_REDIRECT_URI || 'https://smokeball3cx-itt.vercel.app/';
 
         // Token state (in-memory; persists for the lifetime of the process)
         this.accessToken = null;

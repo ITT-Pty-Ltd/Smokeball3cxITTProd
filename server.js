@@ -61,21 +61,21 @@ app.get('/', async (req, res) => {
 
     // Otherwise show status
     res.json({
-        status: 'Cloud Chat Integration is running.',
+        status: 'ITT Smokeball Integration is running.',
         authenticated: smokeballService.isAuthenticated(),
-        installUrl: smokeballService.isAuthenticated() ? null : `http://localhost:${port}/auth/install`,
+        installUrl: smokeballService.isAuthenticated() ? null : `https://smokeball3cx-itt.vercel.app/auth/install`,
     });
 });
 
 // Health check
 app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', message: 'Cloud Chat Integration is running.' });
+    res.json({ status: 'ok', message: 'ITT Smokeball Integration is running.' });
 });
 
 // ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
 app.listen(port, () => {
-    logger.info(`Server listening on http://localhost:${port}`);
-    logger.info(`Install URL: http://localhost:${port}/auth/install`);
+    logger.info(`Server listening on https://smokeball3cx-itt.vercel.app`);
+    logger.info(`Install URL: https://smokeball3cx-itt.vercel.app/auth/install`);
 });
