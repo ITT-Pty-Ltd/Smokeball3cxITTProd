@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const winston = require('winston');
+const path = require('path');
 
 // ---------------------------------------------------------------------------
 // Logger
@@ -84,11 +85,11 @@ app.get('/', async (req, res, next) => {
         }
     }
 
-    // Otherwise pass to express.static to serve index.html
-    next();
+    // Otherwise serve index.html explicitly
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Serve frontend dashboard
+// Serve frontend dashboard for any other static assets if they exist
 app.use(express.static('public'));
 
 // Status API endpoint for the GUI
