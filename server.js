@@ -16,13 +16,21 @@ class MemoryTransport extends winston.Transport {
         super(opts);
     }
     log(info, callback) {
-        logHistory.push({
-            timestamp: info.timestamp || new Date().toISOString(),
-            level: info.level,
-            message: info.message
-        });
-        if (logHistory.length > MAX_LOGS) {
-            logHistory.shift();
+        const msg = info.message || '';
+        
+        const isError = info.level === 'error' || info.level === 'warn';
+        const isApiHit = msg.includes(' /api/') && !msg.includes(' /api/logs');
+        const isAuthLog = msg.includes('Tokens') || msg.includes('Authentication') || msg.includes('Server listening');
+        
+        if (isError || isApiHit || isAuthLog) {
+            logHistory.push({
+                timestamp: info.timestamp || new Date().toISOString(),
+                level: info.level,
+                message: msg
+            });
+            if (logHistory.length > MAX_LOGS) {
+                logHistory.shift();
+            }
         }
         callback();
     }
