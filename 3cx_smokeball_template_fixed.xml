@@ -44,7 +44,7 @@
     </Scenario>
 
     <!-- Contact Lookup (caller-ID pop) -->
-    <Scenario Id="LookupByPhone" Type="REST">
+    <Scenario Id="ContactLookup" Type="REST">
       <Request Url="[MiddlewareServerUrl]/lookup?number=[Number]"
                MessagePasses="0"
                RequestEncoding="UrlEncoded"

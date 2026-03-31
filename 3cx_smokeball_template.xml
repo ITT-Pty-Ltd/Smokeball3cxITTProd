@@ -14,7 +14,7 @@
   <Authentication Type="No" />
   <Scenarios>
     <!-- Contact Lookup (caller-ID pop) -->
-    <Scenario Id="Test" Type="REST">
+    <Scenario Id="ContactLookup" Type="REST">
       <Request Url="[MiddlewareServerUrl]/lookup?number="
                MessagePasses="0"
                RequestEncoding="UrlEncoded"

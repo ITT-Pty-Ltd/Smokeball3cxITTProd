@@ -45,7 +45,7 @@ router.get('/lookup', async (req, res) => {
         };
 
         logger.info(`Match found: ${result.firstName} ${result.lastName}`);
-        res.json(result);
+        res.json([result]);
     } catch (error) {
         logger.error('3CX lookup error:', error.response?.data || error.message);
         res.status(500).json({ error: 'Lookup failed.' });
