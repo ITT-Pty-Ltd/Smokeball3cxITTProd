@@ -35,14 +35,16 @@ class SmokeballService {
                 .select('access_token, refresh_token, token_expiry')
                 .eq('id', 1)
                 .single();
-            if (data && !error) {
+            if (error) {
+                logger.error(`Supabase DB read error: ${error.message}`);
+            } else if (data) {
                 this.accessToken = data.access_token;
                 this.refreshToken = data.refresh_token;
                 this.tokenExpiry = data.token_expiry;
                 return true;
             }
         } catch (err) {
-            logger.error('Failed to load tokens from DB:', err.message);
+            logger.error(`Failed to execute DB load: ${err.message}`);
         }
         return false;
     }
@@ -54,14 +56,17 @@ class SmokeballService {
 
         if (!this.supabase) return;
         try {
-            await this.supabase.from('smokeball_auth').upsert({
+            const { error } = await this.supabase.from('smokeball_auth').upsert({
                 id: 1,
                 access_token: access,
                 refresh_token: refresh,
                 token_expiry: expiry
             });
+            if (error) {
+                logger.error(`Supabase DB write error: ${error.message} - Please check Row Level Security (RLS) policies on your table!`);
+            }
         } catch (err) {
-            logger.error('Failed to save tokens to DB:', err.message);
+            logger.error(`Failed to execute DB save: ${err.message}`);
         }
     }
 
