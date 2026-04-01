@@ -20,6 +20,10 @@ class SmokeballService {
         const supaUrl = process.env.SUPABASE_URL || '';
         const supaKey = process.env.SUPABASE_KEY || '';
         this.supabase = supaUrl && supaKey ? createClient(supaUrl, supaKey) : null;
+        
+        if (!this.supabase) {
+            logger.warn('!!! WARNING: SUPABASE_URL or SUPABASE_KEY is missing from the environment! Database persistence is disabled and tokens will be wiped. !!!');
+        }
 
         // In-memory cache
         this.accessToken = null;
