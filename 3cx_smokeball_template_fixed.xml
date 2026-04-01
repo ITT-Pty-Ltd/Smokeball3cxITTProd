@@ -21,7 +21,7 @@
                RequestType="Get"
                ResponseType="Json" />
       <Rules>
-        <Rule Type="Any">id</Rule>
+        <Rule Type="Any">contacts</Rule>
       </Rules>
       <Variables>
         <Variable Name="ContactID"   Path="id"><Filter /></Variable>
@@ -51,7 +51,7 @@
                RequestType="Get"
                ResponseType="Json" />
       <Rules>
-        <Rule Type="Any">id</Rule>
+        <Rule Type="Any">contacts</Rule>
       </Rules>
       <Variables>
         <Variable Name="ContactID"   Path="id"><Filter /></Variable>
