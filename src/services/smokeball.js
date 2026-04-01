@@ -1,5 +1,6 @@
 const axios = require('axios');
 const winston = require('winston');
+const { createClient } = require('@supabase/supabase-js');
 
 const logger = winston.createLogger({
     level: 'info',
@@ -16,10 +17,52 @@ class SmokeballService {
         this.authUrl = process.env.SMOKEBALL_AUTH_URL || 'https://datastaging-auth.smokeball.com.au';
         this.redirectUri = process.env.SMOKEBALL_REDIRECT_URI || 'https://smokeball3cx-itt.vercel.app/';
 
-        // Token state (in-memory; persists for the lifetime of the process)
+        const supaUrl = process.env.SUPABASE_URL || '';
+        const supaKey = process.env.SUPABASE_KEY || '';
+        this.supabase = supaUrl && supaKey ? createClient(supaUrl, supaKey) : null;
+
+        // In-memory cache
         this.accessToken = null;
         this.refreshToken = null;
         this.tokenExpiry = null;
+    }
+
+    async loadTokensFromDb() {
+        if (!this.supabase) return false;
+        try {
+            const { data, error } = await this.supabase
+                .from('smokeball_auth')
+                .select('access_token, refresh_token, token_expiry')
+                .eq('id', 1)
+                .single();
+            if (data && !error) {
+                this.accessToken = data.access_token;
+                this.refreshToken = data.refresh_token;
+                this.tokenExpiry = data.token_expiry;
+                return true;
+            }
+        } catch (err) {
+            logger.error('Failed to load tokens from DB:', err.message);
+        }
+        return false;
+    }
+
+    async saveTokensToDb(access, refresh, expiry) {
+        this.accessToken = access;
+        this.refreshToken = refresh;
+        this.tokenExpiry = expiry;
+
+        if (!this.supabase) return;
+        try {
+            await this.supabase.from('smokeball_auth').upsert({
+                id: 1,
+                access_token: access,
+                refresh_token: refresh,
+                token_expiry: expiry
+            });
+        } catch (err) {
+            logger.error('Failed to save tokens to DB:', err.message);
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -56,16 +99,20 @@ class SmokeballService {
             },
         });
 
-        this.accessToken = response.data.access_token;
-        this.refreshToken = response.data.refresh_token;
-        this.tokenExpiry = Date.now() + response.data.expires_in * 1000 - 60_000; // 1-min buffer
+        const expiry = Date.now() + response.data.expires_in * 1000 - 60_000; // 1-min buffer
+        await this.saveTokensToDb(response.data.access_token, response.data.refresh_token, expiry);
 
-        logger.info('Tokens acquired successfully.');
+        logger.info('Tokens acquired successfully and saved to DB.');
         return response.data;
     }
 
     /** Refresh the access token using the stored refresh token. */
     async refreshAccessToken() {
+        // We might be spinning up from a cold start
+        if (!this.refreshToken) {
+            await this.loadTokensFromDb();
+        }
+
         if (!this.refreshToken) {
             throw new Error('No refresh token available – user must re-authorize.');
         }
@@ -87,22 +134,29 @@ class SmokeballService {
             },
         });
 
-        this.accessToken = response.data.access_token;
-        this.tokenExpiry = Date.now() + response.data.expires_in * 1000 - 60_000;
+        const expiry = Date.now() + response.data.expires_in * 1000 - 60_000;
+        await this.saveTokensToDb(response.data.access_token, response.data.refresh_token, expiry);
 
-        logger.info('Access token refreshed.');
+        logger.info('Access token refreshed and saved to DB.');
         return response.data;
     }
 
     /** Return a valid access token, refreshing if needed. */
     async getAccessToken() {
+        if (!this.accessToken) {
+            await this.loadTokensFromDb();
+        }
+
         if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
             return this.accessToken;
         }
 
-        if (this.refreshToken) {
-            await this.refreshAccessToken();
-            return this.accessToken;
+        // Even if we have a refresh token but access token expired, refreshAccessToken will reload from DB if needed
+        if (this.refreshToken || await this.loadTokensFromDb()) {
+            if (this.refreshToken) {
+                await this.refreshAccessToken();
+                return this.accessToken;
+            }
         }
 
         throw new Error('Not authenticated – visit /auth/install to connect your Smokeball account.');
@@ -204,7 +258,10 @@ class SmokeballService {
     // Status helper
     // ---------------------------------------------------------------------------
 
-    isAuthenticated() {
+    async isAuthenticated() {
+        if (!this.accessToken) {
+            await this.loadTokensFromDb();
+        }
         return !!(this.accessToken || this.refreshToken);
     }
 }

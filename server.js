@@ -101,18 +101,19 @@ app.get('/', async (req, res, next) => {
 app.use(express.static('public'));
 
 // Status API endpoint for the GUI
-app.get('/api/status', (req, res) => {
+app.get('/api/status', async (req, res) => {
+    const isAuth = await smokeballService.isAuthenticated();
     res.json({
         status: 'ok',
-        authenticated: smokeballService.isAuthenticated(),
-        installUrl: smokeballService.isAuthenticated() ? null : 'https://smokeball3cx-itt.vercel.app/auth/install',
+        authenticated: isAuth,
+        installUrl: isAuth ? null : 'https://smokeball3cx-itt.vercel.app/auth/install',
     });
 });
 
 // Logs API endpoint for the GUI
-app.get('/api/logs', (req, res) => {
+app.get('/api/logs', async (req, res) => {
     // Only return logs if authenticated (optional security measure)
-    if (!smokeballService.isAuthenticated()) {
+    if (!(await smokeballService.isAuthenticated())) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
     res.json(logHistory);
