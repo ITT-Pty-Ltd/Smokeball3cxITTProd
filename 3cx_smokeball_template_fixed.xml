@@ -3,20 +3,53 @@
   <Number Prefix="AsIs" MaxLength="" />
   <Connection MaxConcurrentRequests="2" />
   <Parameters>
-    <Parameter Name="MiddlewareServerUrl" Type="String" Parent="General Configuration" Editor="String" Title="Middleware Server URL (e.g. https://smokeball3cx-itt.vercel.app/api/3cx)" Validation="" Default="https://smokeball3cx-itt.vercel.app/api/3cx" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="MiddlewareServerUrl" Type="String" Parent="" Editor="String" Title="Middleware Server URL" Validation="" Default="https://smokeball3cx-itt.vercel.app/api/3cx" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="AuthDomain" Type="String" Parent="" Editor="String" Title="Smokeball Auth Domain" Validation="" Default="stagingauth.smokeball.com.au" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="SmokeballClientId" Type="String" Parent="" Editor="String" Title="Client ID" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="SmokeballClientSecret" Type="String" Parent="" Editor="String" Title="Client Secret" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="RefreshToken" Type="OAuth" Parent="" Editor="String" Title="Authorization" Validation="" Default="" ListValues="" RequestUrl="https://[AuthDomain]/oauth2/authorize" RequestUrlParameters="client_id=[SmokeballClientId]&amp;response_type=code&amp;redirect_uri=[RedirectUri]&amp;state=[State]" ResponseScenario="OAuthGetRefreshToken" />
   </Parameters>
-  
-  <Authentication Type="OAuth">
-    <Value>
-      <AuthorizationUrl>https://stagingauth.smokeball.com.au/oauth2/authorize</AuthorizationUrl>
-      <TokenUrl>https://stagingauth.smokeball.com.au/oauth2/token</TokenUrl>
-      <ClientId>[ClientID]</ClientId>
-      <ClientSecret>[ClientSecret]</ClientSecret>
-      <Scope></Scope>
-    </Value>
-  </Authentication>
-  
+  <Authentication Type="Scenario" />
   <Scenarios>
+    <Scenario Id="OAuthGetRefreshToken" Type="REST" EntityId="" EntityOrder="">
+      <Request SkipIf="" Url="https://[AuthDomain]/oauth2/token" MessagePasses="0" Message="" RequestContentType="application/x-www-form-urlencoded" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
+        <PostValues Key="" If="" SkipIf="">
+          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="grant_type">authorization_code</Value>
+          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="client_id">[SmokeballClientId]</Value>
+          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="redirect_uri">[RedirectUri]</Value>
+          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="code">[Code]</Value>
+        </PostValues>
+        <Headers Key="" If="" SkipIf="">
+          <Value Key="Authorization" If="" SkipIf="" Passes="1" Type="String" Name="">Basic [Base64([SmokeballClientId]:[SmokeballClientSecret])]</Value>
+        </Headers>
+      </Request>
+      <Rules />
+      <Variables>
+        <Variable Name="RefreshToken" LookupValue="" Path="refresh_token"><Filter /></Variable>
+      </Variables>
+      <Outputs AllowEmpty="true" />
+    </Scenario>
+
+    <Scenario Id="Auth" Type="REST" EntityId="" EntityOrder="">
+      <Request SkipIf="" Url="https://[AuthDomain]/oauth2/token" MessagePasses="0" Message="" RequestContentType="application/x-www-form-urlencoded" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
+        <PostValues Key="" If="" SkipIf="">
+          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="grant_type">refresh_token</Value>
+          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="client_id">[SmokeballClientId]</Value>
+          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="refresh_token">[RefreshToken]</Value>
+        </PostValues>
+        <Headers Key="" If="" SkipIf="">
+          <Value Key="Authorization" If="" SkipIf="" Passes="1" Type="String" Name="">Basic [Base64([SmokeballClientId]:[SmokeballClientSecret])]</Value>
+        </Headers>
+      </Request>
+      <Rules />
+      <Variables>
+        <Variable Name="AccessToken" LookupValue="" Path="access_token"><Filter /></Variable>
+      </Variables>
+      <Outputs AllowEmpty="false">
+        <Output Type="Header" Passes="0" Value="Bearer [AccessToken]" Key="Authorization" />
+      </Outputs>
+    </Scenario>
+
     <Scenario Id="Test" Type="REST" EntityId="" EntityOrder="">
       <Request SkipIf="" Url="[MiddlewareServerUrl]/lookup?number=[Number]" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json" />
       <Rules>
