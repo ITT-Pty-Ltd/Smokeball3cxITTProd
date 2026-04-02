@@ -24,13 +24,13 @@
         <Rule Type="Any">contacts</Rule>
       </Rules>
       <Variables>
-        <Variable Name="ContactID"   Path="id"><Filter /></Variable>
-        <Variable Name="FirstName"   Path="firstName"><Filter /></Variable>
-        <Variable Name="LastName"    Path="lastName"><Filter /></Variable>
-        <Variable Name="CompanyName" Path="company"><Filter /></Variable>
-        <Variable Name="Email"       Path="email"><Filter /></Variable>
-        <Variable Name="PhoneMobile" Path="phone"><Filter /></Variable>
-        <Variable Name="ContactUrl"  Path="contactUrl"><Filter /></Variable>
+        <Variable Name="ContactID"   Path="contacts.id"><Filter /></Variable>
+        <Variable Name="FirstName"   Path="contacts.firstName"><Filter /></Variable>
+        <Variable Name="LastName"    Path="contacts.lastName"><Filter /></Variable>
+        <Variable Name="CompanyName" Path="contacts.company"><Filter /></Variable>
+        <Variable Name="Email"       Path="contacts.email"><Filter /></Variable>
+        <Variable Name="PhoneMobile" Path="contacts.phone"><Filter /></Variable>
+        <Variable Name="ContactUrl"  Path="contacts.contactUrl"><Filter /></Variable>
       </Variables>
       <Outputs AllowEmpty="false">
         <Output Type="ContactID"   Value="[ContactID]" />

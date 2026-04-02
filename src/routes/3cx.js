@@ -27,7 +27,7 @@ router.get('/lookup', async (req, res) => {
 
         if (!contact) {
             logger.info(`No Smokeball contact found for ${number}`);
-            return res.status(200).json({ contacts: [] });
+            return res.status(200).json({});
         }
 
         // Build a response the 3CX template variables can map to.
@@ -45,7 +45,7 @@ router.get('/lookup', async (req, res) => {
         };
 
         logger.info(`Match found: ${result.firstName} ${result.lastName}`);
-        res.json({ contacts: [result] });
+        res.json(result);
     } catch (error) {
         logger.error('3CX lookup error:', error.response?.data || error.message);
         res.status(500).json({ error: 'Lookup failed.' });
