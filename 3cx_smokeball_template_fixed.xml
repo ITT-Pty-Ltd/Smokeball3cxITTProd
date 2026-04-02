@@ -3,11 +3,11 @@
   <Number Prefix="AsIs" MaxLength="" />
   <Connection MaxConcurrentRequests="2" />
   <Parameters>
-    <Parameter Name="MiddlewareServerUrl" Type="String" Parent="" Editor="String" Title="Middleware Server URL (e.g. https://smokeball3cx-itt.vercel.app/api/3cx)" Default="https://smokeball3cx-itt.vercel.app/api/3cx" />
-    <Parameter Name="AuthDomain" Type="String" Editor="String" Title="Smokeball Auth Domain" Default="stagingauth.smokeball.com.au" />
-    <Parameter Name="ClientId" Type="String" Editor="String" Title="Client ID" />
-    <Parameter Name="ClientSecret" Type="String" Editor="String" Title="Client Secret" />
-    <Parameter Name="RefreshToken" Type="OAuth" Title="Authorization" RequestUrl="https://[AuthDomain]/oauth2/authorize" RequestUrlParameters="client_id=[ClientId]&amp;response_type=code&amp;redirect_uri=[RedirectUri]&amp;state=[State]" ResponseScenario="OAuthGetRefreshToken" />
+    <Parameter Name="MiddlewareServerUrl" Type="String" Parent="General Configuration" Editor="String" Title="Middleware Server URL (e.g. https://smokeball3cx-itt.vercel.app/api/3cx)" Validation="" Default="https://smokeball3cx-itt.vercel.app/api/3cx" ListValues="" />
+    <Parameter Name="AuthDomain" Type="String" Parent="General Configuration" Editor="String" Title="Smokeball Auth Domain" Validation="" Default="stagingauth.smokeball.com.au" ListValues="" />
+    <Parameter Name="ClientId" Type="String" Parent="General Configuration" Editor="String" Title="Client ID" Validation="" Default="" ListValues="" />
+    <Parameter Name="ClientSecret" Type="String" Parent="General Configuration" Editor="String" Title="Client Secret" Validation="" Default="" ListValues="" />
+    <Parameter Name="RefreshToken" Type="OAuth" Parent="General Configuration" Editor="OAuth" Title="Authorization" Validation="" Default="" ListValues="" RequestUrl="https://[AuthDomain]/oauth2/authorize" RequestUrlParameters="client_id=[ClientId]&amp;response_type=code&amp;redirect_uri=[RedirectUri]&amp;state=[State]" ResponseScenario="OAuthGetRefreshToken" />
   </Parameters>
   <Authentication Type="Scenario" />
   <Scenarios>
