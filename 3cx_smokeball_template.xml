@@ -32,7 +32,7 @@
         <Variable Name="PhoneMobile" Path="contacts.phone"><Filter /></Variable>
         <Variable Name="ContactUrl"  Path="contacts.contactUrl"><Filter /></Variable>
       </Variables>
-      <Outputs AllowEmpty="false">
+      <Outputs AllowEmpty="true">
         <Output Type="ContactID"   Value="[ContactID]" />
         <Output Type="FirstName"   Value="[FirstName]" />
         <Output Type="LastName"    Value="[LastName]" />
