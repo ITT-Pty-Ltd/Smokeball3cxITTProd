@@ -1,118 +1,67 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Country="AU" Name="Smokeball ITT" Version="1" SupportsEmojis="false" SupportsTranscription="true" ListPageSize="0">
+<?xml version="1.0"?>
+<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+     Country="AU" Name="Smokeball ITT" Version="1">
   <Number Prefix="AsIs" MaxLength="" />
   <Connection MaxConcurrentRequests="2" />
   <Parameters>
-    <Parameter Name="MiddlewareServerUrl" Type="String" Parent="" Editor="String" Title="Middleware Server URL" Validation="" Default="https://smokeball3cx-itt.vercel.app/api/3cx" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="AuthDomain" Type="String" Parent="" Editor="String" Title="Smokeball Auth Domain" Validation="" Default="stagingauth.smokeball.com.au" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="SmokeballClientId" Type="String" Parent="" Editor="String" Title="Client ID" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="SmokeballClientSecret" Type="String" Parent="" Editor="String" Title="Client Secret" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="RefreshToken" Type="OAuth" Parent="" Editor="String" Title="Authorization" Validation="" Default="" ListValues="" RequestUrl="https://[AuthDomain]/oauth2/authorize" RequestUrlParameters="client_id=[SmokeballClientId]&amp;response_type=code&amp;redirect_uri=[RedirectUri]&amp;state=[State]" ResponseScenario="OAuthGetRefreshToken" />
+    <Parameter Name="MiddlewareServerUrl"
+               Type="String"
+               Editor="String"
+               Title="Middleware Server URL (e.g. https://smokeball3cx-itt.vercel.app/api/3cx)"
+               Default="https://smokeball3cx-itt.vercel.app/api/3cx" />
   </Parameters>
-  <Authentication Type="Scenario" />
+  <Authentication Type="No" />
   <Scenarios>
-    <Scenario Id="OAuthGetRefreshToken" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="" Url="https://[AuthDomain]/oauth2/token" MessagePasses="0" Message="" RequestContentType="application/x-www-form-urlencoded" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
-        <PostValues Key="" If="" SkipIf="">
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="grant_type">authorization_code</Value>
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="client_id">[SmokeballClientId]</Value>
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="redirect_uri">[RedirectUri]</Value>
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="code">[Code]</Value>
-        </PostValues>
-        <Headers Key="" If="" SkipIf="">
-          <Value Key="Authorization" If="" SkipIf="" Passes="1" Type="String" Name="">Basic [Base64([SmokeballClientId]:[SmokeballClientSecret])]</Value>
-        </Headers>
-      </Request>
-      <Rules />
-      <Variables>
-        <Variable Name="RefreshToken" LookupValue="" Path="refresh_token"><Filter /></Variable>
-      </Variables>
-      <Outputs AllowEmpty="true" />
-    </Scenario>
-
-    <Scenario Id="Auth" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="" Url="https://[AuthDomain]/oauth2/token" MessagePasses="0" Message="" RequestContentType="application/x-www-form-urlencoded" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
-        <PostValues Key="" If="" SkipIf="">
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="grant_type">refresh_token</Value>
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="client_id">[SmokeballClientId]</Value>
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="refresh_token">[RefreshToken]</Value>
-        </PostValues>
-        <Headers Key="" If="" SkipIf="">
-          <Value Key="Authorization" If="" SkipIf="" Passes="1" Type="String" Name="">Basic [Base64([SmokeballClientId]:[SmokeballClientSecret])]</Value>
-        </Headers>
-      </Request>
-      <Rules />
-      <Variables>
-        <Variable Name="AccessToken" LookupValue="" Path="access_token"><Filter /></Variable>
-      </Variables>
-      <Outputs AllowEmpty="false">
-        <Output Type="Header" Passes="0" Value="Bearer [AccessToken]" Key="Authorization" />
-      </Outputs>
-    </Scenario>
-
-    <Scenario Id="Test" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="" Url="[MiddlewareServerUrl]/lookup?number=[Number]" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json" />
+    <!-- Contact Lookup (caller-ID pop) -->
+    <Scenario Id="ContactLookup" Type="REST">
+      <Request Url="[MiddlewareServerUrl]/lookup?number="
+               MessagePasses="0"
+               RequestEncoding="UrlEncoded"
+               RequestType="Get"
+               ResponseType="Json" />
       <Rules>
-        <Rule Type="Any" Ethalon="">contacts</Rule>
+        <Rule Type="Any">contacts</Rule>
       </Rules>
       <Variables>
-        <Variable Name="ContactID" LookupValue="" Path="id"><Filter /></Variable>
-        <Variable Name="FirstName" LookupValue="" Path="firstName"><Filter /></Variable>
-        <Variable Name="LastName" LookupValue="" Path="lastName"><Filter /></Variable>
-        <Variable Name="CompanyName" LookupValue="" Path="company"><Filter /></Variable>
-        <Variable Name="Email" LookupValue="" Path="email"><Filter /></Variable>
-        <Variable Name="PhoneMobile" LookupValue="" Path="phone"><Filter /></Variable>
-        <Variable Name="ContactUrl" LookupValue="" Path="contactUrl"><Filter /></Variable>
+        <Variable Name="ContactID"   Path="contacts.id"><Filter /></Variable>
+        <Variable Name="FirstName"   Path="contacts.firstName"><Filter /></Variable>
+        <Variable Name="LastName"    Path="contacts.lastName"><Filter /></Variable>
+        <Variable Name="CompanyName" Path="contacts.company"><Filter /></Variable>
+        <Variable Name="Email"       Path="contacts.email"><Filter /></Variable>
+        <Variable Name="PhoneMobile" Path="contacts.phone"><Filter /></Variable>
+        <Variable Name="ContactUrl"  Path="contacts.contactUrl"><Filter /></Variable>
       </Variables>
       <Outputs AllowEmpty="true">
-        <Output Type="ContactID" Passes="0" Value="[ContactID]" />
-        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
-        <Output Type="LastName" Passes="0" Value="[LastName]" />
-        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
-        <Output Type="Email" Passes="0" Value="[Email]" />
-        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
-        <Output Type="ContactUrl" Passes="0" Value="[ContactUrl]" />
+        <Output Type="ContactID"   Value="[ContactID]" />
+        <Output Type="FirstName"   Value="[FirstName]" />
+        <Output Type="LastName"    Value="[LastName]" />
+        <Output Type="CompanyName" Value="[CompanyName]" />
+        <Output Type="Email"       Value="[Email]" />
+        <Output Type="PhoneMobile" Value="[PhoneMobile]" />
+        <Output Type="ContactUrl"  Value="[ContactUrl]" />
       </Outputs>
     </Scenario>
 
-    <Scenario Id="ContactLookup" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="" Url="[MiddlewareServerUrl]/lookup?number=[Number]" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json" />
-      <Rules>
-        <Rule Type="Any" Ethalon="">contacts</Rule>
-      </Rules>
-      <Variables>
-        <Variable Name="ContactID" LookupValue="" Path="id"><Filter /></Variable>
-        <Variable Name="FirstName" LookupValue="" Path="firstName"><Filter /></Variable>
-        <Variable Name="LastName" LookupValue="" Path="lastName"><Filter /></Variable>
-        <Variable Name="CompanyName" LookupValue="" Path="company"><Filter /></Variable>
-        <Variable Name="Email" LookupValue="" Path="email"><Filter /></Variable>
-        <Variable Name="PhoneMobile" LookupValue="" Path="phone"><Filter /></Variable>
-        <Variable Name="ContactUrl" LookupValue="" Path="contactUrl"><Filter /></Variable>
-      </Variables>
-      <Outputs AllowEmpty="true">
-        <Output Type="ContactID" Passes="0" Value="[ContactID]" />
-        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
-        <Output Type="LastName" Passes="0" Value="[LastName]" />
-        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
-        <Output Type="Email" Passes="0" Value="[Email]" />
-        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
-        <Output Type="ContactUrl" Passes="0" Value="[ContactUrl]" />
-      </Outputs>
-    </Scenario>
-
-    <Scenario Id="ReportCall" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="" Url="[MiddlewareServerUrl]/journal" MessagePasses="0" Message="" RequestContentType="application/json" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
-        <PostValues Key="" If="" SkipIf="">
-          <Value Key="" If="" SkipIf="" Passes="2" Type="String" Name="CallType">[CallType]</Value>
-          <Value Key="" If="" SkipIf="" Passes="2" Type="String" Name="Number">[Number]</Value>
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="Duration">[CallDuration]</Value>
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="Agent">[Agent]</Value>
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="RecordUrl">[RecordingUrl]</Value>
-          <Value Key="" If="" SkipIf="" Passes="1" Type="String" Name="ContactId">[ContactID]</Value>
+    <!-- Call Journaling -->
+    <Scenario Id="ReportCall" Type="REST">
+      <Request Url="[MiddlewareServerUrl]/journal"
+               MessagePasses="0"
+               RequestEncoding="Json"
+               RequestType="Post"
+               ResponseType="Json">
+        <PostValues>
+          <Value Name="CallType"      Passes="2" Type="String">[CallType]</Value>
+          <Value Name="Number"        Passes="2" Type="String">[Number]</Value>
+          <Value Name="Duration"      Passes="1" Type="String">[CallDuration]</Value>
+          <Value Name="Agent"         Passes="1" Type="String">[Agent]</Value>
+          <Value Name="RecordUrl"     Passes="1" Type="String">[RecordingUrl]</Value>
+          <Value Name="ContactId"     Passes="1" Type="String">[ContactID]</Value>
+          <Value Name="CallDirection" Passes="1" Type="String">[CallDirection]</Value>
         </PostValues>
       </Request>
       <Variables />
-      <Outputs AllowEmpty="false" />
+      <Outputs />
     </Scenario>
   </Scenarios>
 </Crm>

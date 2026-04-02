@@ -61,20 +61,61 @@ app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) }
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
-// Auth routes removed - handled natively by 3CX now
+const authRoutes = require('./src/routes/auth');
+const smokeballRoutes = require('./src/routes/smokeball');
+const tcxRoutes = require('./src/routes/3cx');
+
+app.use('/auth', authRoutes);
 app.use('/api/smokeball', smokeballRoutes);
 app.use('/api/3cx', tcxRoutes);
 
-// Root route
-app.get('/', (req, res) => {
+// Root route – intercept OAuth callback before serving static files
+const smokeballService = require('./src/services/smokeball');
+
+app.get('/', async (req, res, next) => {
+    const { code, error, error_description } = req.query;
+
+    if (error) {
+        logger.error('OAuth error:', error_description || error);
+        return res.redirect(`/?auth=error&reason=${encodeURIComponent(error_description || error)}`);
+    }
+
+    // If there's a code param, this is the OAuth callback
+    if (code) {
+        try {
+            await smokeballService.exchangeCodeForTokens(code);
+            logger.info('Authentication successful – tokens stored.');
+            return res.redirect('/?auth=success');
+        } catch (err) {
+            logger.error('Token exchange failed:', err.response?.data || err.message);
+            const errMsg = err.response?.data?.error_description || err.message;
+            return res.redirect(`/?auth=error&reason=${encodeURIComponent(errMsg)}`);
+        }
+    }
+
+    // Otherwise serve index.html explicitly
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Serve frontend dashboard for any other static assets if they exist
 app.use(express.static('public'));
 
+// Status API endpoint for the GUI
+app.get('/api/status', async (req, res) => {
+    const isAuth = await smokeballService.isAuthenticated();
+    res.json({
+        status: 'ok',
+        authenticated: isAuth,
+        installUrl: isAuth ? null : 'https://smokeball3cx-itt.vercel.app/auth/install',
+    });
+});
+
 // Logs API endpoint for the GUI
 app.get('/api/logs', async (req, res) => {
+    // Only return logs if authenticated (optional security measure)
+    if (!(await smokeballService.isAuthenticated())) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
     res.json(logHistory);
 });
 

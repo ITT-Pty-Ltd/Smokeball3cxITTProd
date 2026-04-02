@@ -20,17 +20,10 @@ router.get('/lookup', async (req, res) => {
         return res.status(400).json({ error: 'Missing phone number.' });
     }
 
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        logger.error('3CX Lookup Error: Missing or invalid Authorization header from PBX.');
-        return res.status(401).json({ error: 'Missing or invalid Authorization header.' });
-    }
-    const accessToken = authHeader.split(' ')[1];
-
     logger.info(`3CX lookup for number: ${number}`);
 
     try {
-        const contact = await smokeballService.searchContactByPhone(number, accessToken);
+        const contact = await smokeballService.searchContactByPhone(number);
 
         if (!contact) {
             logger.info(`No Smokeball contact found for ${number}`);
