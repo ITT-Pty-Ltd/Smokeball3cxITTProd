@@ -69,7 +69,7 @@ app.use('/api/smokeball', smokeballRoutes);
 app.use('/api/3cx', tcxRoutes);
 
 // Root route – intercept OAuth callback before serving static files
-app.get('/', async (req, res, next) => {
+app.get(['/', '/auth/callback'], async (req, res, next) => {
     const { code, state, error, error_description } = req.query;
 
     if (error) {

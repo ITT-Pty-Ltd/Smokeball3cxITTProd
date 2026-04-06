@@ -13,7 +13,7 @@ const logger = winston.createLogger({
 const clientId = process.env.SMOKEBALL_CLIENT_ID;
 const clientSecret = process.env.SMOKEBALL_CLIENT_SECRET;
 const authUrl = process.env.SMOKEBALL_AUTH_URL || 'https://datastaging-auth.smokeball.com.au';
-const APP_CALLBACK_URL = (process.env.SMOKEBALL_REDIRECT_URI || 'https://smokeball3cx-itt.vercel.app').replace(/\/$/, "");
+const APP_CALLBACK_URL = process.env.SMOKEBALL_REDIRECT_URI || 'https://smokeball3cx-itt.vercel.app/auth/callback';
 
 // Helper to extract Bearer token
 function getAccessTokenFromReq(req) {
