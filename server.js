@@ -17,10 +17,9 @@ class MemoryTransport extends winston.Transport {
     }
     log(info, callback) {
         const msg = info.message || '';
-        
         const isError = info.level === 'error' || info.level === 'warn';
         const isApiHit = msg.includes(' /api/') && !msg.includes(' /api/logs');
-        const isAuthLog = msg.includes('Tokens') || msg.includes('Authentication') || msg.includes('Server listening');
+        const isAuthLog = msg.includes('Tokens') || msg.includes('Authentication') || msg.includes('Server listening') || msg.includes('Stateless');
         
         if (isError || isApiHit || isAuthLog) {
             logHistory.push({
@@ -70,30 +69,37 @@ app.use('/api/smokeball', smokeballRoutes);
 app.use('/api/3cx', tcxRoutes);
 
 // Root route – intercept OAuth callback before serving static files
-const smokeballService = require('./src/services/smokeball');
-
 app.get('/', async (req, res, next) => {
-    const { code, error, error_description } = req.query;
+    const { code, state, error, error_description } = req.query;
 
     if (error) {
         logger.error('OAuth error:', error_description || error);
         return res.redirect(`/?auth=error&reason=${encodeURIComponent(error_description || error)}`);
     }
 
-    // If there's a code param, this is the OAuth callback
     if (code) {
-        try {
-            await smokeballService.exchangeCodeForTokens(code);
-            logger.info('Authentication successful – tokens stored.');
-            return res.redirect('/?auth=success');
-        } catch (err) {
-            logger.error('Token exchange failed:', err.response?.data || err.message);
-            const errMsg = err.response?.data?.error_description || err.message;
-            return res.redirect(`/?auth=error&reason=${encodeURIComponent(errMsg)}`);
+        // Intercept 3CX PBX stateless OAuth flow
+        if (state) {
+            try {
+                const decodedState = JSON.parse(Buffer.from(state, 'base64').toString('ascii'));
+                if (decodedState.pbxRedirect) {
+                    const pbxUrl = new URL(decodedState.pbxRedirect);
+                    pbxUrl.searchParams.append('code', code);
+                    if (decodedState.pbxState) {
+                        pbxUrl.searchParams.append('state', decodedState.pbxState);
+                    }
+                    logger.info(`Stateless OAuth proxy: Redirecting browser back to PBX -> ${pbxUrl.toString()}`);
+                    return res.redirect(pbxUrl.toString());
+                }
+            } catch (e) {
+                // Not a valid JSON base64 state, ignore
+            }
         }
+        
+        // Old stateful handle fallback (informative only)
+        return res.redirect('/?auth=success_but_stateless');
     }
 
-    // Otherwise serve index.html explicitly
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -101,21 +107,17 @@ app.get('/', async (req, res, next) => {
 app.use(express.static('public'));
 
 // Status API endpoint for the GUI
-app.get('/api/status', async (req, res) => {
-    const isAuth = await smokeballService.isAuthenticated();
+app.get('/api/status', (req, res) => {
     res.json({
         status: 'ok',
-        authenticated: isAuth,
-        installUrl: isAuth ? null : 'https://smokeball3cx-itt.vercel.app/auth/install',
+        authenticated: true, // Always true since PBX handles auth individually
+        installUrl: null,
+        message: 'Stateless Proxy Active - Native 3CX Authentication'
     });
 });
 
 // Logs API endpoint for the GUI
-app.get('/api/logs', async (req, res) => {
-    // Only return logs if authenticated (optional security measure)
-    if (!(await smokeballService.isAuthenticated())) {
-        return res.status(401).json({ error: 'Not authenticated' });
-    }
+app.get('/api/logs', (req, res) => {
     res.json(logHistory);
 });
 
@@ -124,5 +126,5 @@ app.get('/api/logs', async (req, res) => {
 // ---------------------------------------------------------------------------
 app.listen(port, () => {
     logger.info(`Server listening on https://smokeball3cx-itt.vercel.app`);
-    logger.info(`Install URL: https://smokeball3cx-itt.vercel.app/auth/install`);
+    logger.info(`Stateless Proxy Active. Load the XML template directly into the 3CX PBX.`);
 });

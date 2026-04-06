@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const smokeballService = require('../services/smokeball');
 const winston = require('winston');
 
 const logger = winston.createLogger({
@@ -11,53 +10,22 @@ const logger = winston.createLogger({
 
 /**
  * GET /auth/install
- * Redirects the user to Smokeball's OAuth2 authorize page.
- * This is the "installation URL" users visit to connect their account.
+ * Native installation is now handled directly by the 3CX PBX. 
+ * This route just informs users who accidentally visit the old link.
  */
 router.get('/install', (req, res) => {
-    const url = smokeballService.getInstallUrl();
-    logger.info(`Redirecting user to Smokeball authorize URL: ${url}`);
-    res.redirect(url);
-});
-
-/**
- * GET /auth/callback
- * Smokeball redirects back here with ?code=xxxxx after the user logs in.
- * We exchange the code for access + refresh tokens.
- */
-router.get('/callback', async (req, res) => {
-    const { code } = req.query;
-
-    if (!code) {
-        logger.error('Callback received without authorization code.');
-        return res.status(400).json({ error: 'Missing authorization code.' });
-    }
-
-    try {
-        const tokenData = await smokeballService.exchangeCodeForTokens(code);
-        logger.info('Authentication successful – tokens stored.');
-        res.json({
-            message: 'Authentication successful! You can now use the API.',
-            token_type: tokenData.token_type,
-            expires_in: tokenData.expires_in,
-        });
-    } catch (error) {
-        logger.error('Token exchange failed:', error.response?.data || error.message);
-        res.status(500).json({
-            error: 'Failed to exchange code for tokens.',
-            details: error.response?.data || error.message,
-        });
-    }
+    res.send('Native installation is handled directly within your 3CX PBX. Please load the XML Template into your 3CX Server to authenticate natively.');
 });
 
 /**
  * GET /auth/status
- * Quick check whether the server currently holds valid tokens.
+ * Just reports stateless mode
  */
 router.get('/status', (req, res) => {
     res.json({
-        authenticated: smokeballService.isAuthenticated(),
-        installUrl: smokeballService.isAuthenticated() ? null : smokeballService.getInstallUrl(),
+        authenticated: true,
+        installUrl: null,
+        mode: 'stateless proxy'
     });
 });
 
