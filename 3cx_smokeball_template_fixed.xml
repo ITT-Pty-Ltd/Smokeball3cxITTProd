@@ -8,7 +8,7 @@
     <Parameter Name="ApiKey" Type="String" Parent="General Configuration" Editor="String" Title="API Key:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="ClientId" Type="String" Parent="General Configuration" Editor="String" Title="Client ID:" Validation="" Default="5idpvktscv7ttns3ps76dsn01k" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="ClientSecret" Type="Password" Parent="General Configuration" Editor="String" Title="Client Secret:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="RefreshToken" Type="OAuth" Parent="General Configuration" Editor="String" Title="Refresh Token:" Validation="" Default="" ListValues="" RequestUrl="https://datastaging-auth.smokeball.com.au/oauth2/authorize?response_type=code&amp;client_id=5idpvktscv7ttns3ps76dsn01k&amp;redirect_uri=https%3A%2F%2Fitt-testpbx.3cx.com.au" RequestUrlParameters="response_type=code&amp;client_id=[ClientId]&amp;redirect_uri=[RedirectUri]&amp;state=[State]&amp;code_challenge=[CodeChallenge]" ResponseScenario="OAuthGetAccessToken" />
+    <Parameter Name="RefreshToken" Type="OAuth" Parent="General Configuration" Editor="String" Title="Refresh Token:" Validation="" Default="" ListValues="" RequestUrl="[MiddlewareServerUrl]/api/3cx/oauth2/authorize" RequestUrlParameters="response_type=code&amp;client_id=[ClientId]&amp;redirect_uri=[RedirectUri]&amp;state=[State]&amp;code_challenge=[CodeChallenge]" ResponseScenario="OAuthGetAccessToken" />
     <Parameter Name="ReportCallEnabled" Type="Boolean" Parent="" Editor="String" Title="Enable Call Journaling" Validation="" Default="False" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="Subject" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Call Subject:" Validation="" Default="3CX PhoneSystem Call" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="InboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Answered Inbound Call:" Validation="" Default="[DateTime]: Answered incoming call from [Number] [Name] to [Agent] ([Duration])" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
@@ -21,7 +21,7 @@
   </Authentication>
   <Scenarios>
     <Scenario Id="Auth" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="" Url="https://datastaging-auth.smokeball.com.au/oauth2/token" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
+      <Request SkipIf="" Url="[MiddlewareServerUrl]/api/3cx/oauth2/token" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
         <PostValues Key="" If="" SkipIf="">
           <Value Key="grant_type" If="" SkipIf="" Passes="0" Type="String">refresh_token</Value>
           <Value Key="refresh_token" If="" SkipIf="" Passes="0" Type="String">[RefreshToken]</Value>
@@ -41,7 +41,7 @@
     </Scenario>
 
     <Scenario Id="OAuthGetAccessToken" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="" Url="https://datastaging-auth.smokeball.com.au/oauth2/token" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
+      <Request SkipIf="" Url="[MiddlewareServerUrl]/api/3cx/oauth2/token" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
         <PostValues Key="" If="" SkipIf="">
           <Value Key="code" If="" SkipIf="" Passes="0" Type="String">[code]</Value>
           <Value Key="grant_type" If="" SkipIf="" Passes="0" Type="String">authorization_code</Value>
