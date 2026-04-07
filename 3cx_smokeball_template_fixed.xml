@@ -21,7 +21,7 @@
   </Authentication>
   <Scenarios>
     <Scenario Id="Auth" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="" Url="[MiddlewareServerUrl]/api/3cx/oauth2/token" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
+      <Request SkipIf="" Url="https://datastaging-auth.smokeball.com.au/oauth2/token" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
         <PostValues Key="" If="" SkipIf="">
           <Value Key="grant_type" If="" SkipIf="" Passes="0" Type="String">refresh_token</Value>
           <Value Key="refresh_token" If="" SkipIf="" Passes="0" Type="String">[RefreshToken]</Value>
@@ -41,7 +41,7 @@
     </Scenario>
 
     <Scenario Id="OAuthGetAccessToken" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="" Url="[MiddlewareServerUrl]/api/3cx/oauth2/token" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
+      <Request SkipIf="" Url="https://datastaging-auth.smokeball.com.au/oauth2/token" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Post" ResponseType="Json">
         <PostValues Key="" If="" SkipIf="">
           <Value Key="code" If="" SkipIf="" Passes="0" Type="String">[code]</Value>
           <Value Key="grant_type" If="" SkipIf="" Passes="0" Type="String">authorization_code</Value>
