@@ -129,7 +129,11 @@ router.get('/lookup', async (req, res) => {
     } catch (error) {
         logger.error('3CX lookup error:', error.response?.data || error.message);
         const upstreamError = error.response?.data || error.message;
-        res.status(500).json({ error: 'Lookup failed.', details: upstreamError });
+        const debugInfo = {
+            tokenLength: token ? token.length : 0,
+            hasApiKey: !!smokeballService.apiKey,
+        };
+        res.status(500).json({ error: 'Lookup failed.', details: upstreamError, _debug: debugInfo });
     }
 });
 
