@@ -128,7 +128,8 @@ router.get('/lookup', async (req, res) => {
         res.json({ contacts: [result] });
     } catch (error) {
         logger.error('3CX lookup error:', error.response?.data || error.message);
-        res.status(500).json({ error: 'Lookup failed.' });
+        const upstreamError = error.response?.data || error.message;
+        res.status(500).json({ error: 'Lookup failed.', details: upstreamError });
     }
 });
 
