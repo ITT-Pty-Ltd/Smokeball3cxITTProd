@@ -64,7 +64,7 @@
     </Scenario>
 
     <Scenario Id="" Type="REST" EntityId="Contacts" EntityOrder="[LookupOrder]">
-      <Request SkipIf="" Url="[MiddlewareServerUrl]/lookup?number=[Number]" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json" />
+      <Request SkipIf="" Url="[MiddlewareServerUrl]/api/3cx/lookup?number=[Number]" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json" />
       <Rules>
         <Rule Type="Any" Ethalon="">contacts.id</Rule>
       </Rules>
@@ -90,7 +90,7 @@
     </Scenario>
 
     <Scenario Id="ReportCall" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="[ReportCallEnabled]!=True||[EntityId]==&quot;&quot;" Url="[MiddlewareServerUrl]/journal" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
+      <Request SkipIf="[ReportCallEnabled]!=True||[EntityId]==&quot;&quot;" Url="[MiddlewareServerUrl]/api/3cx/journal" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
         <PostValues Key="" If="" SkipIf="">
           <Value Key="CallType" If="" SkipIf="" Passes="2" Type="String">[CallType]</Value>
           <Value Key="Number" If="" SkipIf="" Passes="2" Type="String">[Number]</Value>

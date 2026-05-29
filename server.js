@@ -2,64 +2,17 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const winston = require('winston');
 const path = require('path');
+const config = require('./src/config');
+const { logger, getLogHistory } = require('./src/logger');
 
-// ---------------------------------------------------------------------------
-// Logger
-// ---------------------------------------------------------------------------
-const logHistory = [];
-const MAX_LOGS = 100;
-
-class MemoryTransport extends winston.Transport {
-    constructor(opts) {
-        super(opts);
-    }
-    log(info, callback) {
-        const msg = info.message || '';
-        const isError = info.level === 'error' || info.level === 'warn';
-        const isApiHit = msg.includes(' /api/') && !msg.includes(' /api/logs');
-        const isAuthLog = msg.includes('Tokens') || msg.includes('Authentication') || msg.includes('Server listening') || msg.includes('Stateless');
-        
-        if (isError || isApiHit || isAuthLog) {
-            logHistory.push({
-                timestamp: info.timestamp || new Date().toISOString(),
-                level: info.level,
-                message: msg
-            });
-            if (logHistory.length > MAX_LOGS) {
-                logHistory.shift();
-            }
-        }
-        callback();
-    }
-}
-
-const memoryTransport = new MemoryTransport();
-
-const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
-    transports: [
-        new winston.transports.Console(),
-        memoryTransport
-    ],
-});
-
-// ---------------------------------------------------------------------------
-// Express app
-// ---------------------------------------------------------------------------
 const app = express();
-const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) } }));
 
-// ---------------------------------------------------------------------------
-// Routes
-// ---------------------------------------------------------------------------
 const authRoutes = require('./src/routes/auth');
 const smokeballRoutes = require('./src/routes/smokeball');
 const tcxRoutes = require('./src/routes/3cx');
@@ -68,8 +21,21 @@ app.use('/auth', authRoutes);
 app.use('/api/smokeball', smokeballRoutes);
 app.use('/api/3cx', tcxRoutes);
 
-// Root route – intercept OAuth callback before serving static files
-app.get(['/', '/auth/callback'], async (req, res, next) => {
+/** Legacy paths used by older 3CX CRM templates (before /api/3cx prefix). */
+function forwardTo3cx(subpath) {
+    return (req, res, next) => {
+        const query = Object.keys(req.query).length
+            ? `?${new URLSearchParams(req.query).toString()}`
+            : '';
+        req.url = `${subpath}${query}`;
+        tcxRoutes(req, res, next);
+    };
+}
+
+app.get('/lookup', forwardTo3cx('/lookup'));
+app.post('/journal', forwardTo3cx('/journal'));
+
+app.get(['/', '/auth/callback'], async (req, res) => {
     const { code, state, error, error_description } = req.query;
 
     if (error) {
@@ -78,7 +44,6 @@ app.get(['/', '/auth/callback'], async (req, res, next) => {
     }
 
     if (code) {
-        // Intercept 3CX PBX stateless OAuth flow
         if (state) {
             try {
                 const decodedState = JSON.parse(Buffer.from(state, 'base64').toString('ascii'));
@@ -88,43 +53,40 @@ app.get(['/', '/auth/callback'], async (req, res, next) => {
                     if (decodedState.pbxState) {
                         pbxUrl.searchParams.append('state', decodedState.pbxState);
                     }
-                    logger.info(`Stateless OAuth proxy: Redirecting browser back to PBX -> ${pbxUrl.toString()}`);
+                    logger.info(`Stateless OAuth proxy: redirecting browser back to PBX -> ${pbxUrl.toString()}`);
                     return res.redirect(pbxUrl.toString());
                 }
-            } catch (e) {
-                // Not a valid JSON base64 state, ignore
+            } catch {
+                // Not a valid base64 JSON state payload
             }
         }
-        
-        // Old stateful handle fallback (informative only)
-        return res.redirect('/?auth=success_but_stateless');
+
+        return res.redirect('/?auth=success');
     }
 
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Serve frontend dashboard for any other static assets if they exist
 app.use(express.static('public'));
 
-// Status API endpoint for the GUI
 app.get('/api/status', (req, res) => {
     res.json({
         status: 'ok',
-        authenticated: true, // Always true since PBX handles auth individually
+        authenticated: true,
         installUrl: null,
-        message: 'Stateless Proxy Active - Native 3CX Authentication'
+        message: 'Stateless Proxy Active - Native 3CX Authentication',
     });
 });
 
-// Logs API endpoint for the GUI
 app.get('/api/logs', (req, res) => {
-    res.json(logHistory);
+    res.json(getLogHistory());
 });
 
-// ---------------------------------------------------------------------------
-// Start
-// ---------------------------------------------------------------------------
-app.listen(port, () => {
-    logger.info(`Server listening on https://smokeball3cx-itt.vercel.app`);
-    logger.info(`Stateless Proxy Active. Load the XML template directly into the 3CX PBX.`);
-});
+if (require.main === module) {
+    app.listen(config.port, () => {
+        logger.info(`Server listening on ${config.publicUrl}`);
+        logger.info('Stateless Proxy Active. Load the XML template directly into the 3CX PBX.');
+    });
+}
+
+module.exports = app;

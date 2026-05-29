@@ -1,22 +1,19 @@
 const axios = require('axios');
-const winston = require('winston');
-
-const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
-    transports: [new winston.transports.Console()],
-});
+const config = require('../config');
 
 class SmokeballService {
     constructor() {
-        this.apiKey = process.env.SMOKEBALL_API_KEY;
-        this.apiUrl = process.env.SMOKEBALL_API_URL || 'https://stagingapi.smokeball.com.au';
+        this.apiKey = config.smokeball.apiKey;
+        this.apiUrl = config.smokeball.apiUrl;
     }
 
     /** Return standard headers for every Smokeball API call. */
     _headers(accessToken) {
         if (!accessToken) {
             throw new Error('Access token is required for Smokeball API calls');
+        }
+        if (!this.apiKey) {
+            throw new Error('SMOKEBALL_API_KEY is not configured');
         }
         return {
             Authorization: `Bearer ${accessToken}`,
@@ -47,7 +44,7 @@ class SmokeballService {
      * iterate through paginated contacts and match locally.
      */
     async searchContactByPhone(accessToken, phoneNumber) {
-        const normalised = phoneNumber.replace(/\D/g, ''); // digits only
+        const normalised = phoneNumber.replace(/\D/g, '');
         let offset = 0;
         const limit = 500;
 
@@ -80,18 +77,16 @@ class SmokeballService {
                     }
                 }
 
-                if (contact.company && contact.company.phone) {
-                    if (phoneMatch(getDigits(contact.company.phone))) {
-                        return contact;
-                    }
+                if (contact.company?.phone && phoneMatch(getDigits(contact.company.phone))) {
+                    return contact;
                 }
             }
 
-            if (contacts.length < limit) break; // last page
+            if (contacts.length < limit) break;
             offset += limit;
         }
 
-        return null; // not found
+        return null;
     }
 }
 
