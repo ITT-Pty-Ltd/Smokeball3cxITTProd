@@ -14,10 +14,16 @@ function normalizeAuthBaseUrl(raw) {
 const redirectUri =
     process.env.SMOKEBALL_REDIRECT_URI || 'https://smokeball3cx-itt.vercel.app/auth/callback';
 
-/** Web app base URL for ContactUrl links opened from 3CX (not the REST API host). */
+/** Web app origin only — no paths or {placeholders} (3CX may append /contacts/{id} itself). */
 function deriveAppUrl(apiUrl) {
-    if (process.env.SMOKEBALL_APP_URL) {
-        return process.env.SMOKEBALL_APP_URL.replace(/\/$/, '');
+    const raw = process.env.SMOKEBALL_APP_URL;
+    if (raw) {
+        try {
+            const url = new URL(raw);
+            return `${url.protocol}//${url.host}`;
+        } catch {
+            return raw.replace(/\/$/, '').replace(/\/contacts.*$/i, '');
+        }
     }
     try {
         const host = new URL(apiUrl).hostname;

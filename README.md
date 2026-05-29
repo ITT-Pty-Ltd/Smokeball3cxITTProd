@@ -313,7 +313,7 @@ For OAuth testing locally, use a tunnel (e.g. ngrok) and set `SMOKEBALL_REDIRECT
 
 3CX opens the `ContactUrl` from lookup in your browser. If that URL points at the **REST API** (`stagingapi.smokeball.com.au/contacts/...`), the browser has no OAuth token and Smokeball returns `{"message":"Unauthorized"}`.
 
-The middleware now returns the **Smokeball web app** URL instead (`SMOKEBALL_APP_URL`, default `https://app.smokeball.com.au/contacts/{id}`). Set `SMOKEBALL_APP_URL` in Vercel if your firm uses a different host.
+The middleware and CRM template now use the **Smokeball web app** URL (`https://app.smokeball.com.au/contacts/{id}`). Set `SMOKEBALL_APP_URL` to the app **origin only** (e.g. `https://app.smokeball.com.au`) — do not include `/contacts/{contact-id}` placeholders. Re-import `3cx_smokeball_template_fixed.xml` (version 3) so 3CX builds the link as `[SmokeballAppUrl]/contacts/[Id]`.
 
 ### Lookup returns no contacts
 
