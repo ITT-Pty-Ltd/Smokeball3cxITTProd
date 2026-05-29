@@ -31,6 +31,9 @@ const config = {
         authBaseUrl: normalizeAuthBaseUrl(process.env.SMOKEBALL_AUTH_URL),
         redirectUri,
         oauthMode: oauthMode === 'proxy' ? 'proxy' : 'passthrough',
+        maxRetries: Number(process.env.SMOKEBALL_MAX_RETRIES) || 3,
+        retryBaseDelayMs: Number(process.env.SMOKEBALL_RETRY_BASE_DELAY_MS) || 500,
+        searchResultLimit: Number(process.env.SMOKEBALL_SEARCH_LIMIT) || 50,
     },
 };
 

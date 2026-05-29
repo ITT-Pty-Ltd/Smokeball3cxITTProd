@@ -12,7 +12,7 @@ Node.js middleware that connects **3CX Phone System** to **Smokeball** (Australi
 - 3CX always sends its own callback URL (`https://<pbx-fqdn>/api/oauth2crm`) during authorization.
 - Smokeball has no API to search contacts by phone number.
 
-This app sits in the middle: it proxies OAuth, rewrites redirect URIs, forwards the auth code back to 3CX, and paginates through Smokeball contacts to match phone numbers.
+This app sits in the middle: it proxies OAuth, rewrites redirect URIs, forwards the auth code back to 3CX, and searches Smokeball contacts by phone for caller ID lookup.
 
 ---
 
@@ -92,9 +92,10 @@ Authorization: Bearer {access_token}
 The middleware:
 
 1. Validates the Bearer token from 3CX.
-2. Paginates through Smokeball `GET /contacts/` (500 per page).
-3. Matches phone numbers on person (`phone`, `phone2`, `cell`) and company (`phone`) using suffix matching (handles different formats).
-4. Returns a JSON payload 3CX expects:
+2. Queries Smokeball `GET /contacts/` with the `Search` parameter (e.g. `phone:*412345678*`) — typically one API call per lookup instead of paging the full contact list.
+3. Verifies matches locally on person (`phone`, `phone2`, `cell`) and company (`phone`) using suffix matching (handles different formats).
+4. Retries on `429 Too Many Requests` and `5xx` errors with exponential backoff (honors `Retry-After` when present).
+5. Returns a JSON payload 3CX expects:
 
 ```json
 {
@@ -181,6 +182,9 @@ Copy `.env.example` to `.env` for local development.
 | `SMOKEBALL_REDIRECT_URI` | Yes | Middleware OAuth callback, e.g. `https://your-app.vercel.app/auth/callback` |
 | `SMOKEBALL_OAUTH_MODE` | No | `proxy` (default) or `passthrough` |
 | `PUBLIC_URL` | No | Public base URL for logging and dashboard |
+| `SMOKEBALL_MAX_RETRIES` | No | Retries on 429/5xx (default `3`) |
+| `SMOKEBALL_RETRY_BASE_DELAY_MS` | No | Initial backoff delay in ms (default `500`) |
+| `SMOKEBALL_SEARCH_LIMIT` | No | Max contacts returned per search query (default `50`) |
 
 **Never commit `.env`** — it is listed in `.gitignore`.
 
@@ -308,7 +312,14 @@ For OAuth testing locally, use a tunnel (e.g. ngrok) and set `SMOKEBALL_REDIRECT
 
 - Confirm the refresh token / access token is valid (re-authorize).
 - Verify `SMOKEBALL_API_KEY` is set on the deployment.
-- The phone number must exist on a Smokeball contact; matching is suffix-based across paginated results (can be slow for large contact lists).
+- The phone number must exist on a Smokeball contact; matching uses Smokeball `Search` then suffix verification locally.
+- Check middleware logs for `Smokeball phone search: phone:*...` entries.
+
+### 429 rate limit errors
+
+- Default limit is 5 requests/second per Smokeball client ID.
+- The middleware retries automatically with exponential backoff.
+- If errors persist under heavy call volume, contact Smokeball about rate limit increases or deploy per-client middleware instances.
 
 ### 3CX cannot reach middleware
 
