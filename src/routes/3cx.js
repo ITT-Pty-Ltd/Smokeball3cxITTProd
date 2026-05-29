@@ -6,7 +6,13 @@ const smokeballService = require('../services/smokeball');
 const { getAccessTokenFromReq } = require('../utils/auth');
 const { logger } = require('../logger');
 
-const { clientId, clientSecret, authBaseUrl, redirectUri: appCallbackUrl } = config.smokeball;
+const {
+    clientId,
+    clientSecret,
+    authBaseUrl,
+    redirectUri: appCallbackUrl,
+    oauthMode,
+} = config.smokeball;
 
 // ---------------------------------------------------------------------------
 // Proxy Auth Endpoints (Stateless Auth for 3CX)
@@ -19,17 +25,23 @@ router.get('/oauth2/authorize', (req, res) => {
         return res.status(400).send('Missing redirect_uri');
     }
 
-    const statePayload = {
-        pbxRedirect: redirect_uri,
-        pbxState: state || '',
-    };
-    const b64State = Buffer.from(JSON.stringify(statePayload)).toString('base64');
+    let smokeballRedirectUri = redirect_uri;
+    let smokeballState = state || '';
+
+    if (oauthMode === 'proxy') {
+        const statePayload = {
+            pbxRedirect: redirect_uri,
+            pbxState: state || '',
+        };
+        smokeballRedirectUri = appCallbackUrl;
+        smokeballState = Buffer.from(JSON.stringify(statePayload)).toString('base64');
+    }
 
     const params = new URLSearchParams({
         response_type: response_type || 'code',
         client_id: client_id || clientId,
-        redirect_uri: appCallbackUrl,
-        state: b64State,
+        redirect_uri: smokeballRedirectUri,
+        state: smokeballState,
     });
 
     if (code_challenge) {
@@ -37,7 +49,7 @@ router.get('/oauth2/authorize', (req, res) => {
     }
 
     const targetUrl = `${authBaseUrl}/oauth2/authorize?${params.toString()}`;
-    logger.info(`Proxying authorize request -> ${targetUrl}`);
+    logger.info(`OAuth authorize (${oauthMode}) -> ${targetUrl}`);
     res.redirect(targetUrl);
 });
 
@@ -46,7 +58,7 @@ router.post('/oauth2/token', async (req, res) => {
 
     logger.info('Received token proxy request from 3CX PBX', { grant_type: req.body.grant_type });
 
-    if (body.has('redirect_uri')) {
+    if (oauthMode === 'proxy' && body.has('redirect_uri')) {
         body.set('redirect_uri', appCallbackUrl);
     }
 

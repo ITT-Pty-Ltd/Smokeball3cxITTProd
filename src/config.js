@@ -14,6 +14,9 @@ function normalizeAuthBaseUrl(raw) {
 const redirectUri =
     process.env.SMOKEBALL_REDIRECT_URI || 'https://smokeball3cx-itt.vercel.app/auth/callback';
 
+/** passthrough = use 3CX redirect_uri (must match Smokeball app). proxy = rewrite to SMOKEBALL_REDIRECT_URI. */
+const oauthMode = (process.env.SMOKEBALL_OAUTH_MODE || 'passthrough').toLowerCase();
+
 const config = {
     port: Number(process.env.PORT) || 3000,
     publicUrl:
@@ -27,6 +30,7 @@ const config = {
         apiUrl: process.env.SMOKEBALL_API_URL || 'https://stagingapi.smokeball.com.au',
         authBaseUrl: normalizeAuthBaseUrl(process.env.SMOKEBALL_AUTH_URL),
         redirectUri,
+        oauthMode: oauthMode === 'proxy' ? 'proxy' : 'passthrough',
     },
 };
 
