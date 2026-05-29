@@ -106,7 +106,7 @@ The middleware:
     "company": "...",
     "phone": "...",
     "email": "...",
-    "contactUrl": "https://app.smokeball.com.au/contacts/{id}"
+    "contactUrl": "https://<middleware>/api/3cx/contacts/{id}/open"
   }]
 }
 ```
@@ -309,11 +309,15 @@ For OAuth testing locally, use a tunnel (e.g. ngrok) and set `SMOKEBALL_REDIRECT
 - Ensure proxy mode rewrites `redirect_uri` on the token endpoint (default behavior).
 - Confirm Client ID and Client Secret in 3CX match the Smokeball app.
 
-### "Unauthorized" when answering a call / opening contact
+### "Unauthorized" or "Missing Authentication Token" when answering a call
 
-3CX opens the `ContactUrl` from lookup in your browser. If that URL points at the **REST API** (`stagingapi.smokeball.com.au/contacts/...`), the browser has no OAuth token and Smokeball returns `{"message":"Unauthorized"}`.
+3CX opens `ContactUrl` in your browser. URLs like `stagingapi.smokeball.com.au/contacts/...` or `app.smokeball.com.au/contacts/...` are **API routes** — they require Bearer tokens and cannot be opened in a browser tab.
 
-The middleware and CRM template now use the **Smokeball web app** URL (`https://app.smokeball.com.au/contacts/{id}`). Set `SMOKEBALL_APP_URL` to the app **origin only** (e.g. `https://app.smokeball.com.au`) — do not include `/contacts/{contact-id}` placeholders. Re-import `3cx_smokeball_template_fixed.xml` (version 3) so 3CX builds the link as `[SmokeballAppUrl]/contacts/[Id]`.
+The integration uses a **middleware contact page** instead:
+
+`https://<middleware>/api/3cx/contacts/{id}/open`
+
+This page shows the matched contact details (cached during lookup) and a link to open the Smokeball web app home. Re-import `3cx_smokeball_template_fixed.xml` (version 4).
 
 ### Lookup returns no contacts
 

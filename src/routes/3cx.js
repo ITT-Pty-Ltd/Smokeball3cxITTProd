@@ -4,6 +4,8 @@ const axios = require('axios');
 const config = require('../config');
 const smokeballService = require('../services/smokeball');
 const { getAccessTokenFromReq } = require('../utils/auth');
+const contactCache = require('../utils/contactCache');
+const { renderContactPage, renderNotFoundPage } = require('../utils/contactPage');
 const { logger } = require('../logger');
 
 const {
@@ -121,9 +123,10 @@ router.get('/lookup', async (req, res) => {
             company: company.name || '',
             phone: number,
             email: person.email || company.email || '',
-            // 3CX opens ContactUrl in the browser — must be the web app, not the REST API.
-            contactUrl: smokeballService.buildContactWebUrl(contact.id),
+            contactUrl: smokeballService.buildContactOpenUrl(contact.id),
         };
+
+        contactCache.set(contact.id, result);
 
         logger.info(`Match found: ${result.firstName} ${result.lastName}`);
         res.json({ contacts: [result] });
@@ -134,6 +137,15 @@ router.get('/lookup', async (req, res) => {
             details: error.response?.data || error.message,
         });
     }
+});
+
+/** Browser-friendly contact card (no Smokeball auth required). Populated during lookup. */
+router.get('/contacts/:id/open', (req, res) => {
+    const cached = contactCache.get(req.params.id);
+    if (!cached) {
+        return res.status(404).type('html').send(renderNotFoundPage());
+    }
+    res.type('html').send(renderContactPage(cached, config.smokeball.appUrl));
 });
 
 router.post('/journal', (req, res) => {

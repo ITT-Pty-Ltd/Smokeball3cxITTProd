@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Country="AU" Name="Smokeball ITT" Version="3" SupportsEmojis="true" SupportsTranscription="true" ListPageSize="0">
+<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Country="AU" Name="Smokeball ITT" Version="4" SupportsEmojis="true" SupportsTranscription="true" ListPageSize="0">
   <Number Prefix="AsIs" MaxLength="" />
   <Connection MaxConcurrentRequests="2" />
   <Parameters>
     <Parameter Name="LookupOrder" Type="List" Parent="General Configuration" Editor="String" Title="Contact Lookup Order:" Validation="" Default="Contacts" ListValues="Contacts" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="MiddlewareServerUrl" Type="String" Parent="General Configuration" Editor="String" Title="Middleware Server URL:" Validation="" Default="https://smokeball3cx-itt.vercel.app" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="SmokeballAppUrl" Type="String" Parent="General Configuration" Editor="String" Title="Smokeball Web App URL:" Validation="" Default="https://app.smokeball.com.au" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="ApiKey" Type="String" Parent="General Configuration" Editor="String" Title="API Key:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="ClientId" Type="String" Parent="General Configuration" Editor="String" Title="Client ID:" Validation="" Default="5idpvktscv7ttns3ps76dsn01k" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="ClientSecret" Type="Password" Parent="General Configuration" Editor="String" Title="Client Secret:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
@@ -78,7 +77,7 @@
         <Variable Name="Email" LookupValue="" Path="contacts.email"><Filter /></Variable>
       </Variables>
       <Outputs AllowEmpty="true">
-        <Output Type="ContactUrl" Passes="0" Value="[SmokeballAppUrl]/contacts/[Id]" />
+        <Output Type="ContactUrl" Passes="0" Value="[MiddlewareServerUrl]/api/3cx/contacts/[Id]/open" />
         <Output Type="FirstName" Passes="0" Value="[FirstName]" />
         <Output Type="LastName" Passes="0" Value="[LastName]" />
         <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />

@@ -65,11 +65,11 @@ class SmokeballService {
     }
 
     /**
-     * URL opened by 3CX when the user clicks the matched contact (e.g. on Answer).
-     * Must not be the REST API URL — that requires Bearer + x-api-key headers.
+     * URL opened by 3CX in the browser when answering a call.
+     * Uses middleware contact page — Smokeball has no public per-contact web URL.
      */
-    buildContactWebUrl(contactId) {
-        return `${this.appUrl}/contacts/${contactId}`;
+    buildContactOpenUrl(contactId) {
+        return `${config.publicUrl}/api/3cx/contacts/${contactId}/open`;
     }
 
     _headers(accessToken) {
