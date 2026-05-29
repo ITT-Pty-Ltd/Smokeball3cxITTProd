@@ -106,7 +106,7 @@ The middleware:
     "company": "...",
     "phone": "...",
     "email": "...",
-    "contactUrl": "https://stagingapi.smokeball.com.au/contacts/{id}"
+    "contactUrl": "https://app.smokeball.com.au/contacts/{id}"
   }]
 }
 ```
@@ -179,6 +179,7 @@ Copy `.env.example` to `.env` for local development.
 | `SMOKEBALL_API_KEY` | Yes | API key header for Smokeball REST API |
 | `SMOKEBALL_AUTH_URL` | Yes | OAuth host only, e.g. `https://datastaging-auth.smokeball.com.au` |
 | `SMOKEBALL_API_URL` | Yes | API base URL, e.g. `https://stagingapi.smokeball.com.au` (production: `https://api.smokeball.com.au`) |
+| `SMOKEBALL_APP_URL` | No | Web app base for ContactUrl links from 3CX (default `https://app.smokeball.com.au`) |
 | `SMOKEBALL_REDIRECT_URI` | Yes | Middleware OAuth callback, e.g. `https://your-app.vercel.app/auth/callback` |
 | `SMOKEBALL_OAUTH_MODE` | No | `proxy` (default) or `passthrough` |
 | `PUBLIC_URL` | No | Public base URL for logging and dashboard |
@@ -307,6 +308,12 @@ For OAuth testing locally, use a tunnel (e.g. ngrok) and set `SMOKEBALL_REDIRECT
 
 - Ensure proxy mode rewrites `redirect_uri` on the token endpoint (default behavior).
 - Confirm Client ID and Client Secret in 3CX match the Smokeball app.
+
+### "Unauthorized" when answering a call / opening contact
+
+3CX opens the `ContactUrl` from lookup in your browser. If that URL points at the **REST API** (`stagingapi.smokeball.com.au/contacts/...`), the browser has no OAuth token and Smokeball returns `{"message":"Unauthorized"}`.
+
+The middleware now returns the **Smokeball web app** URL instead (`SMOKEBALL_APP_URL`, default `https://app.smokeball.com.au/contacts/{id}`). Set `SMOKEBALL_APP_URL` in Vercel if your firm uses a different host.
 
 ### Lookup returns no contacts
 

@@ -61,6 +61,15 @@ class SmokeballService {
     constructor() {
         this.apiKey = config.smokeball.apiKey;
         this.apiUrl = config.smokeball.apiUrl;
+        this.appUrl = config.smokeball.appUrl;
+    }
+
+    /**
+     * URL opened by 3CX when the user clicks the matched contact (e.g. on Answer).
+     * Must not be the REST API URL — that requires Bearer + x-api-key headers.
+     */
+    buildContactWebUrl(contactId) {
+        return `${this.appUrl}/contacts/${contactId}`;
     }
 
     _headers(accessToken) {

@@ -121,7 +121,8 @@ router.get('/lookup', async (req, res) => {
             company: company.name || '',
             phone: number,
             email: person.email || company.email || '',
-            contactUrl: `${smokeballService.apiUrl}/contacts/${contact.id}`,
+            // 3CX opens ContactUrl in the browser — must be the web app, not the REST API.
+            contactUrl: smokeballService.buildContactWebUrl(contact.id),
         };
 
         logger.info(`Match found: ${result.firstName} ${result.lastName}`);
