@@ -319,6 +319,22 @@ The integration uses a **middleware contact page** instead:
 
 This page shows the matched contact details (cached during lookup) and a link to open the Smokeball web app home. Re-import `3cx_smokeball_template_fixed.xml` (version 4).
 
+### Duplicate contacts appearing in 3CX
+
+This usually happens when:
+
+1. **Several Smokeball contacts share the same phone number** — the middleware now picks the **most recently updated** record and always uses the same `EntityId` for that number.
+2. **"Add CRM contacts to 3CX company phonebook"** is enabled — 3CX may keep old entries when the matched `EntityId` used to change between lookups. **Uncheck this** under CRM integration settings, then delete duplicate entries in the 3CX Contacts list once.
+
+After deploying the fix, clear existing duplicates manually in 3CX (they are not removed automatically).
+
+### Old contact name still showing in 3CX
+
+3CX caches CRM/phonebook entries locally. The middleware fetches **fresh** contact data from Smokeball on every lookup, but 3CX may still show stale names until you:
+
+- Delete old duplicate CRM contacts in 3CX, or
+- Disable "Add CRM contacts to phonebook" and rely on live lookup only
+
 ### Lookup returns no contacts
 
 - Confirm the refresh token / access token is valid (re-authorize).

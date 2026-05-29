@@ -7,7 +7,10 @@ function escapeHtml(value) {
 }
 
 function renderContactPage(contact, smokeballAppUrl) {
-    const name = [contact.firstName, contact.lastName].filter(Boolean).join(' ') || 'Unknown';
+    const name =
+        [contact.firstName, contact.lastName].filter(Boolean).join(' ') ||
+        contact.company ||
+        'Unknown';
     const company = contact.company ? `<p><strong>Company:</strong> ${escapeHtml(contact.company)}</p>` : '';
     const phone = contact.phone ? `<p><strong>Phone:</strong> ${escapeHtml(contact.phone)}</p>` : '';
     const email = contact.email ? `<p><strong>Email:</strong> ${escapeHtml(contact.email)}</p>` : '';

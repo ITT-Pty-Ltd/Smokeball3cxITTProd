@@ -5,6 +5,7 @@ const config = require('../config');
 const smokeballService = require('../services/smokeball');
 const { getAccessTokenFromReq } = require('../utils/auth');
 const contactCache = require('../utils/contactCache');
+const { formatContactFor3cx } = require('../utils/contactFormat');
 const { renderContactPage, renderNotFoundPage } = require('../utils/contactPage');
 const { logger } = require('../logger');
 
@@ -113,22 +114,18 @@ router.get('/lookup', async (req, res) => {
             return res.status(200).json({ contacts: [] });
         }
 
-        const person = contact.person || {};
-        const company = contact.company || {};
-
         const result = {
-            id: contact.id,
-            firstName: person.firstName || '',
-            lastName: person.lastName || company.name || 'Unknown',
-            company: company.name || '',
-            phone: number,
-            email: person.email || company.email || '',
+            ...formatContactFor3cx(contact, number),
             contactUrl: smokeballService.buildContactOpenUrl(contact.id),
         };
 
         contactCache.set(contact.id, result);
 
-        logger.info(`Match found: ${result.firstName} ${result.lastName}`);
+        const displayName =
+            result.company ||
+            [result.firstName, result.lastName].filter(Boolean).join(' ') ||
+            'Unknown';
+        logger.info(`Match found: ${displayName} (id=${result.id})`);
         res.json({ contacts: [result] });
     } catch (error) {
         logger.error('3CX lookup error:', error.response?.data || error.message);

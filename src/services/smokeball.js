@@ -57,6 +57,20 @@ function buildPhoneSearchTerms(phoneNumber) {
     return [...new Set(candidates.map((d) => `phone:*${d}*`))];
 }
 
+/** Prefer the contact Smokeball updated most recently when several share a phone number. */
+function pickBestContactMatch(matches) {
+    if (!matches.length) return null;
+
+    const byId = new Map();
+    for (const contact of matches) {
+        byId.set(contact.id, contact);
+    }
+
+    const unique = [...byId.values()];
+    unique.sort((a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0));
+    return unique[0];
+}
+
 class SmokeballService {
     constructor() {
         this.apiKey = config.smokeball.apiKey;
@@ -134,11 +148,13 @@ class SmokeballService {
 
     /**
      * Search contacts by phone number using Smokeball's Search parameter,
-     * then verify matches locally (suffix matching on area code + number).
+     * collect all matches, then return the most recently updated contact.
+     * Re-fetches by ID so 3CX always gets current name/details from Smokeball.
      */
     async searchContactByPhone(accessToken, phoneNumber) {
         const normalised = phoneNumber.replace(/\D/g, '');
         const searchTerms = buildPhoneSearchTerms(phoneNumber);
+        const matches = [];
 
         for (const term of searchTerms) {
             logger.info(`Smokeball phone search: ${term}`);
@@ -147,12 +163,28 @@ class SmokeballService {
 
             for (const contact of contacts) {
                 if (phoneMatches(normalised, contact)) {
-                    return contact;
+                    matches.push(contact);
                 }
             }
+
+            if (matches.length) break;
         }
 
-        return null;
+        const best = pickBestContactMatch(matches);
+        if (!best) return null;
+
+        if (matches.length > 1) {
+            logger.info(
+                `Multiple Smokeball contacts matched phone ${phoneNumber}; using id=${best.id} (lastUpdated=${best.lastUpdated})`
+            );
+        }
+
+        try {
+            return await this.fetchContactById(accessToken, best.id);
+        } catch (err) {
+            logger.warn(`Could not refresh contact ${best.id}, using search result:`, err.message);
+            return best;
+        }
     }
 }
 
