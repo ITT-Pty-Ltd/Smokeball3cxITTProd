@@ -4,7 +4,7 @@
   <Connection MaxConcurrentRequests="2" />
   <Parameters>
     <Parameter Name="LookupOrder" Type="List" Parent="General Configuration" Editor="String" Title="Contact Lookup Order:" Validation="" Default="Contacts" ListValues="Contacts" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="MiddlewareServerUrl" Type="String" Parent="General Configuration" Editor="String" Title="Middleware Server URL:" Validation="" Default="https://smokeball3cx-itt.vercel.app" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="MiddlewareServerUrl" Type="String" Parent="General Configuration" Editor="String" Title="Middleware Server URL:" Validation="" Default="https://your-app.azurewebsites.net" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="ApiKey" Type="String" Parent="General Configuration" Editor="String" Title="API Key:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="ClientId" Type="String" Parent="General Configuration" Editor="String" Title="Client ID:" Validation="" Default="5idpvktscv7ttns3ps76dsn01k" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="ClientSecret" Type="Password" Parent="General Configuration" Editor="String" Title="Client Secret:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />

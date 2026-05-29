@@ -11,8 +11,7 @@ function normalizeAuthBaseUrl(raw) {
     }
 }
 
-const redirectUri =
-    process.env.SMOKEBALL_REDIRECT_URI || 'https://smokeball3cx-itt.vercel.app/auth/callback';
+const redirectUri = process.env.SMOKEBALL_REDIRECT_URI;
 
 /** Web app origin only — no paths or {placeholders} (3CX may append /contacts/{id} itself). */
 function deriveAppUrl(apiUrl) {
@@ -44,7 +43,7 @@ const config = {
     port: Number(process.env.PORT) || 3000,
     publicUrl:
         process.env.PUBLIC_URL ||
-        redirectUri.replace(/\/auth\/callback\/?$/, '') ||
+        (redirectUri ? redirectUri.replace(/\/auth\/callback\/?$/, '') : null) ||
         'http://localhost:3000',
     smokeball: {
         clientId: process.env.SMOKEBALL_CLIENT_ID,
@@ -66,6 +65,7 @@ function validateConfig() {
     if (!config.smokeball.clientId) missing.push('SMOKEBALL_CLIENT_ID');
     if (!config.smokeball.clientSecret) missing.push('SMOKEBALL_CLIENT_SECRET');
     if (!config.smokeball.apiKey) missing.push('SMOKEBALL_API_KEY');
+    if (!redirectUri) missing.push('SMOKEBALL_REDIRECT_URI');
     if (missing.length) {
         console.warn(`Warning: missing env vars: ${missing.join(', ')}`);
     }

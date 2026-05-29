@@ -8,7 +8,7 @@ Node.js middleware that connects **3CX Phone System** to **Smokeball** (Australi
 
 3CX cannot talk to Smokeball directly because:
 
-- Smokeball’s OAuth redirect URI is registered for the **middleware** (e.g. Vercel), not each PBX hostname.
+- Smokeball’s OAuth redirect URI is registered for the **middleware** (e.g. Azure App Service), not each PBX hostname.
 - 3CX always sends its own callback URL (`https://<pbx-fqdn>/api/oauth2crm`) during authorization.
 - Smokeball has no API to search contacts by phone number.
 
@@ -26,7 +26,7 @@ flowchart TB
         OAuth3CX["/api/oauth2crm"]
     end
 
-    subgraph middleware [Middleware - Vercel / Node]
+    subgraph middleware [Middleware - Azure App Service / Node]
         AuthZ["/api/3cx/oauth2/authorize"]
         Callback["/auth/callback"]
         Token["/api/3cx/oauth2/token"]
@@ -151,7 +151,8 @@ Legacy paths `/lookup` and `/journal` (without `/api/3cx`) are supported for old
 
 ```
 ├── server.js                      # Express entry point
-├── vercel.json                    # Vercel deployment config
+├── .deployment                    # Azure Oryx build during deploy
+├── .github/workflows/             # GitHub Actions → Azure App Service
 ├── 3cx_smokeball_template_fixed.xml   # 3CX CRM template (load into PBX)
 ├── public/index.html              # Admin dashboard
 └── src/
@@ -180,7 +181,7 @@ Copy `.env.example` to `.env` for local development.
 | `SMOKEBALL_AUTH_URL` | Yes | OAuth host only, e.g. `https://datastaging-auth.smokeball.com.au` |
 | `SMOKEBALL_API_URL` | Yes | API base URL, e.g. `https://stagingapi.smokeball.com.au` (production: `https://api.smokeball.com.au`) |
 | `SMOKEBALL_APP_URL` | No | Web app base for ContactUrl links from 3CX (default `https://app.smokeball.com.au`) |
-| `SMOKEBALL_REDIRECT_URI` | Yes | Middleware OAuth callback, e.g. `https://your-app.vercel.app/auth/callback` |
+| `SMOKEBALL_REDIRECT_URI` | Yes | Middleware OAuth callback, e.g. `https://your-app.azurewebsites.net/auth/callback` |
 | `SMOKEBALL_OAUTH_MODE` | No | `proxy` (default) or `passthrough` |
 | `PUBLIC_URL` | No | Public base URL for logging and dashboard |
 | `SMOKEBALL_MAX_RETRIES` | No | Retries on 429/5xx (default `3`) |
@@ -217,11 +218,11 @@ Choose one deployment per client **or** a shared multi-tenant instance (current 
 Only works if all clients share the same Smokeball OAuth app credentials.
 
 **Option B — Per-client middleware (recommended)**  
-Deploy a separate Vercel project (or instance) per client with their own env vars.
+Deploy a separate Azure Web App (or App Service instance) per client with their own env vars.
 
 | Setting | What to set |
 |---------|-------------|
-| Vercel project | New project or fork from template repo |
+| Azure Web App | New Linux Node 20 app per client (or separate resource group) |
 | `SMOKEBALL_CLIENT_ID` | Client’s Smokeball OAuth client ID |
 | `SMOKEBALL_CLIENT_SECRET` | Client’s secret |
 | `SMOKEBALL_API_KEY` | Client’s API key |
@@ -231,7 +232,7 @@ Deploy a separate Vercel project (or instance) per client with their own env var
 | `SMOKEBALL_OAUTH_MODE` | `proxy` |
 | `PUBLIC_URL` | `https://<this-deployment>` |
 
-Redeploy after changing environment variables.
+Restart the Web App (or redeploy) after changing application settings.
 
 ### 3. 3CX CRM template
 
@@ -351,11 +352,94 @@ After deploying the fix, clear existing duplicates manually in 3CX (they are not
 ### 3CX cannot reach middleware
 
 - Middleware must be HTTPS and publicly reachable.
-- Check firewall / 3CX outbound access to your Vercel host.
+- Check firewall / 3CX outbound access to your middleware host (Azure URL or custom domain).
+
+---
+
+## Deploying to Azure App Service
+
+This app is a standard **Express** server (`npm start` → `server.js`). Azure **App Service on Linux** with Node 20 is the recommended host (always-on process, HTTPS on `*.azurewebsites.net`, Application Settings for secrets).
+
+### 1. Create the Web App (Azure CLI)
+
+```bash
+az group create --name rg-smokeball3cx --location australiaeast
+
+az appservice plan create \
+  --name plan-smokeball3cx \
+  --resource-group rg-smokeball3cx \
+  --sku B1 \
+  --is-linux
+
+az webapp create \
+  --name smokeball3cx-itt \
+  --resource-group rg-smokeball3cx \
+  --plan plan-smokeball3cx \
+  --runtime "NODE:20-lts"
+```
+
+Replace `smokeball3cx-itt` with a globally unique name. Your public URL will be `https://smokeball3cx-itt.azurewebsites.net`.
+
+### 2. Application settings
+
+In **Azure Portal → Web App → Settings → Environment variables** (or `az webapp config appsettings set`), set the same variables as in `.env.example`. At minimum:
+
+| Setting | Example |
+|---------|---------|
+| `SMOKEBALL_CLIENT_ID` | From Smokeball developer portal |
+| `SMOKEBALL_CLIENT_SECRET` | From Smokeball developer portal |
+| `SMOKEBALL_API_KEY` | From Smokeball developer portal |
+| `SMOKEBALL_AUTH_URL` | `https://datastaging-auth.smokeball.com.au` |
+| `SMOKEBALL_API_URL` | `https://stagingapi.smokeball.com.au` |
+| `SMOKEBALL_REDIRECT_URI` | `https://smokeball3cx-itt.azurewebsites.net/auth/callback` |
+| `PUBLIC_URL` | `https://smokeball3cx-itt.azurewebsites.net` |
+| `SMOKEBALL_OAUTH_MODE` | `proxy` |
+
+Azure injects `PORT` automatically; do not override it unless you know you need to.
+
+Optional: enable **Health check** path `/api/status` under **Settings → Health check**.
+
+### 3. Deploy code
+
+**GitHub Actions (recommended)** — workflow `.github/workflows/azure-webapps-deploy.yml`:
+
+1. Create the Web App in Azure (step 1).
+2. **Download publish profile** from the Web App → **Overview** → **Download publish profile**.
+3. In GitHub → **Settings → Secrets and variables → Actions**, add:
+   - `AZURE_WEBAPP_NAME` — Web App name (e.g. `smokeball3cx-itt`)
+   - `AZURE_WEBAPP_PUBLISH_PROFILE` — full XML contents of the publish profile file
+4. Push to `main`; the workflow runs `npm ci` and deploys the repo root.
+
+**One-off CLI deploy** (from repo root, with [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) logged in):
+
+```bash
+az webapp up --name smokeball3cx-itt --resource-group rg-smokeball3cx --runtime "NODE:20-lts"
+```
+
+**Zip deploy** — zip the project (exclude `node_modules` and `.env`); Oryx installs dependencies when `.deployment` sets `SCM_DO_BUILD_DURING_DEPLOYMENT=true`.
+
+### 4. Custom domain (optional)
+
+Add a custom hostname under **Settings → Custom domains**, bind a certificate (App Service managed certificate or your own), then update:
+
+- `SMOKEBALL_REDIRECT_URI` and `PUBLIC_URL`
+- Smokeball OAuth redirect URI in the developer portal
+- **Middleware Server URL** in the 3CX CRM template
+
+### 5. Migrating from Vercel
+
+| Step | Action |
+|------|--------|
+| 1 | Deploy to Azure and confirm `https://<app>.azurewebsites.net/api/status` returns `{"status":"ok",...}` |
+| 2 | Copy all environment variables from Vercel → Azure Application settings |
+| 3 | Update **Smokeball** registered redirect URI to `https://<azure-host>/auth/callback` |
+| 4 | Update 3CX CRM **Middleware Server URL** (or re-upload XML with new default) |
+| 5 | Re-run **Authorize** in 3CX if tokens were tied to the old host |
+| 6 | Decommission the Vercel project when satisfied |
 
 ---
 
 ## Repository
 
 - **GitHub:** https://github.com/LentilKun/Smokeball3cxITT
-- **Default deployment:** Vercel (`vercel.json` routes all traffic to `server.js`)
+- **Default deployment:** Azure App Service (Linux, Node 20) via GitHub Actions or `az webapp up`
