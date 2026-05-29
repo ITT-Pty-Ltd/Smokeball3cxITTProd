@@ -46,10 +46,13 @@ router.get('/oauth2/authorize', (req, res) => {
 
     if (code_challenge) {
         params.append('code_challenge', code_challenge);
+        params.append('code_challenge_method', 'S256');
     }
 
     const targetUrl = `${authBaseUrl}/oauth2/authorize?${params.toString()}`;
-    logger.info(`OAuth authorize (${oauthMode}) -> ${targetUrl}`);
+    logger.info(
+        `OAuth authorize (${oauthMode}): 3CX redirect=${redirect_uri} -> Smokeball redirect=${smokeballRedirectUri}`
+    );
     res.redirect(targetUrl);
 });
 
@@ -59,6 +62,7 @@ router.post('/oauth2/token', async (req, res) => {
     logger.info('Received token proxy request from 3CX PBX', { grant_type: req.body.grant_type });
 
     if (oauthMode === 'proxy' && body.has('redirect_uri')) {
+        logger.info(`OAuth token (${oauthMode}): rewriting redirect_uri to ${appCallbackUrl}`);
         body.set('redirect_uri', appCallbackUrl);
     }
 
