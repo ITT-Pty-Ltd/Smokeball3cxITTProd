@@ -76,11 +76,3 @@ jobs:
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: .
 
-      # OIDC deploy: no publish profile; azure/login step above must have run
-      - name: Deploy to Azure Web App (OIDC)
-        if: vars.USE_AZURE_OIDC == 'true'
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: .
