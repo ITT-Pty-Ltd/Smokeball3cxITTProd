@@ -1,16 +1,11 @@
 # Build and deploy to Azure App Service.
 #
-# Use ONE of these credential setups (GitHub → Settings → Secrets and variables → Actions):
-#
-# Option A — Publish profile (simplest):
-#   AZURE_WEBAPP_NAME              e.g. smokeball3cx
-#   AZURE_WEBAPP_PUBLISH_PROFILE   full XML from Azure Portal → Web App → Download publish profile
-#
-# Option B — OIDC (Azure Deployment Center / federated credentials):
+# Required secrets:
 #   AZURE_WEBAPP_NAME
-#   AZURE_CLIENT_ID
-#   AZURE_TENANT_ID
-#   AZURE_SUBSCRIPTION_ID
+#   AZURE_WEBAPP_PUBLISH_PROFILE   — from Azure Portal → Web App → Download publish profile
+#
+# Optional (OIDC instead of publish profile): set repository variable USE_AZURE_OIDC=true and add:
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
 
 name: Build and deploy Node.js app to Azure Web App
 
@@ -62,18 +57,30 @@ jobs:
         with:
           name: node-app
 
+      # OIDC: only when repo variable USE_AZURE_OIDC=true (secrets cannot be used in if:)
       - name: Login to Azure (OIDC)
-        if: ${{ secrets.AZURE_CLIENT_ID != '' }}
+        if: vars.USE_AZURE_OIDC == 'true'
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to Azure Web App
+      # Publish profile (default): set AZURE_WEBAPP_PUBLISH_PROFILE secret; leave USE_AZURE_OIDC unset
+      - name: Deploy to Azure Web App (publish profile)
+        if: vars.USE_AZURE_OIDC != 'true'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .
+
+      # OIDC deploy: no publish profile; azure/login step above must have run
+      - name: Deploy to Azure Web App (OIDC)
+        if: vars.USE_AZURE_OIDC == 'true'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: .
