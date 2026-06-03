@@ -117,14 +117,37 @@ If no match is found, it returns `{ "contacts": [] }`.
 
 ## Call journaling
 
-When enabled in the 3CX template, 3CX POSTs call details to:
+When **Enable Call Journaling** is turned on in 3CX, the PBX POSTs call details to:
 
 ```
 POST /api/3cx/journal
 Authorization: Bearer {access_token}
 ```
 
-The middleware currently **logs** these events and returns `{ "status": "received" }`. Writing call notes back into Smokeball is not implemented yet.
+The middleware:
+
+1. Receives call metadata from 3CX (including AI **transcription**, **summary**, **recording URL**, and agent details when available).
+2. **Looks up the Smokeball staff member** who handled the call — by `AgentEmail` first, then by `AgentFirstName` + `AgentLastName` via `GET /staff?Search=...`.
+3. Creates a **Smokeball task** (`POST /tasks`) assigned to that staff member — **no matter linkage**.
+4. Puts full call details (summary, transcription, recording link, contact info) in the task **note**.
+
+Journal **all** call types (inbound, outbound, missed, unanswered), including calls without a matched CRM contact.
+
+### 3CX prerequisites
+
+- Enable **Call Journaling** in the CRM integration settings.
+- Ensure each extension has **email** and **name** filled in (used for staff lookup).
+- Enable call recording + AI transcription in 3CX for transcript/summary fields to populate.
+- Re-upload `3cx_smokeball_template_fixed.xml` if your template predates transcription fields.
+
+### Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `JOURNAL_CREATE_TASKS` | No | `true` (default) — create Smokeball tasks; `false` — log only |
+| `SMOKEBALL_DEFAULT_STAFF_ID` | Recommended | Fallback Smokeball staff GUID when agent lookup fails |
+
+Confirm your Smokeball OAuth app includes **Tasks** and **Staff** API scopes.
 
 ---
 
@@ -187,6 +210,8 @@ Copy `.env.example` to `.env` for local development.
 | `SMOKEBALL_MAX_RETRIES` | No | Retries on 429/5xx (default `3`) |
 | `SMOKEBALL_RETRY_BASE_DELAY_MS` | No | Initial backoff delay in ms (default `500`) |
 | `SMOKEBALL_SEARCH_LIMIT` | No | Max contacts returned per search query (default `50`) |
+| `JOURNAL_CREATE_TASKS` | No | Create Smokeball tasks from call journal (`true` default) |
+| `SMOKEBALL_DEFAULT_STAFF_ID` | Recommended | Fallback staff GUID when 3CX agent lookup fails |
 
 **Never commit `.env`** — it is listed in `.gitignore`.
 

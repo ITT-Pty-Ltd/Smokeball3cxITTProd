@@ -7,6 +7,7 @@ const { getAccessTokenFromReq } = require('../utils/auth');
 const contactCache = require('../utils/contactCache');
 const { formatContactFor3cx } = require('../utils/contactFormat');
 const { renderContactPage, renderNotFoundPage } = require('../utils/contactPage');
+const { processCallJournal } = require('../services/journalProcessor');
 const { logger } = require('../logger');
 
 const {
@@ -145,7 +146,7 @@ router.get('/contacts/:id/open', (req, res) => {
     res.type('html').send(renderContactPage(cached, config.smokeball.appUrl));
 });
 
-router.post('/journal', (req, res) => {
+router.post('/journal', async (req, res) => {
     const token = getAccessTokenFromReq(req);
     if (!token) {
         logger.warn('Missing access token in /journal request');
@@ -153,7 +154,20 @@ router.post('/journal', (req, res) => {
     }
 
     logger.info('3CX journal received', req.body);
-    res.status(200).json({ status: 'received' });
+
+    try {
+        const result = await processCallJournal(token, req.body);
+        if (result.status === 'failed') {
+            return res.status(422).json(result);
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        logger.error('3CX journal error:', error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({
+            error: 'Journal processing failed.',
+            details: error.response?.data || error.message,
+        });
+    }
 });
 
 module.exports = router;

@@ -57,6 +57,10 @@ const config = {
         maxRetries: Number(process.env.SMOKEBALL_MAX_RETRIES) || 3,
         retryBaseDelayMs: Number(process.env.SMOKEBALL_RETRY_BASE_DELAY_MS) || 500,
         searchResultLimit: Number(process.env.SMOKEBALL_SEARCH_LIMIT) || 50,
+        defaultStaffId: process.env.SMOKEBALL_DEFAULT_STAFF_ID || null,
+    },
+    journal: {
+        createTasks: process.env.JOURNAL_CREATE_TASKS !== 'false',
     },
 };
 

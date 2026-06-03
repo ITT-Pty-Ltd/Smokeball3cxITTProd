@@ -124,6 +124,56 @@ class SmokeballService {
         );
     }
 
+    async _post(accessToken, url, data, extraHeaders = {}) {
+        return requestWithRetry(
+            async () => {
+                const response = await axios.post(url, data, {
+                    headers: { ...this._headers(accessToken), ...extraHeaders },
+                });
+                return response.data;
+            },
+            { maxRetries, baseDelayMs: retryBaseDelayMs }
+        );
+    }
+
+    _buildStaffUrl(queryParams) {
+        const params = new URLSearchParams();
+        for (const [key, value] of Object.entries(queryParams)) {
+            if (value == null) continue;
+            if (Array.isArray(value)) {
+                for (const item of value) {
+                    params.append(key, item);
+                }
+            } else {
+                params.append(key, String(value));
+            }
+        }
+        return `${this.apiUrl}/staff?${params.toString()}`;
+    }
+
+    /** Search firm staff (Search fields: email, name). */
+    async searchStaff(accessToken, searchTerms, offset = 0, limit = 25) {
+        const url = this._buildStaffUrl({
+            Search: searchTerms,
+            Offset: offset,
+            Limit: limit,
+        });
+        return this._get(accessToken, url);
+    }
+
+    /** Create a task (matterId optional). Returns link object (HTTP 202). */
+    async createTask(accessToken, task, options = {}) {
+        const url = `${this.apiUrl}/tasks`;
+        const headers = {};
+        if (options.requestId) {
+            headers.RequestId = options.requestId;
+        }
+        if (options.userId) {
+            headers.UserId = options.userId;
+        }
+        return this._post(accessToken, url, task, headers);
+    }
+
     /** Fetch contacts (paginated). */
     async fetchContacts(accessToken, offset = 0, limit = 500) {
         const url = this._buildContactsUrl({ Offset: offset, Limit: limit });

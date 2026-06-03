@@ -75,6 +75,9 @@ app.get('/api/status', (req, res) => {
         authenticated: true,
         installUrl: null,
         message: 'Stateless Proxy Active - Native 3CX Authentication',
+        publicUrl: config.publicUrl,
+        smokeballRedirectUri: config.smokeball.redirectUri,
+        oauthMode: config.smokeball.oauthMode,
     });
 });
 

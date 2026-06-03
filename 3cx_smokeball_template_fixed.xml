@@ -4,17 +4,17 @@
   <Connection MaxConcurrentRequests="2" />
   <Parameters>
     <Parameter Name="LookupOrder" Type="List" Parent="General Configuration" Editor="String" Title="Contact Lookup Order:" Validation="" Default="Contacts" ListValues="Contacts" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="MiddlewareServerUrl" Type="String" Parent="General Configuration" Editor="String" Title="Middleware Server URL:" Validation="" Default="https://your-app.azurewebsites.net" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="ApiKey" Type="String" Parent="General Configuration" Editor="String" Title="API Key:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="ClientId" Type="String" Parent="General Configuration" Editor="String" Title="Client ID:" Validation="" Default="5idpvktscv7ttns3ps76dsn01k" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="MiddlewareServerUrl" Type="String" Parent="General Configuration" Editor="String" Title="Middleware Server URL:" Validation="" Default="https://smokeball3cx-edemambpcpdhgqc9.australiaeast-01.azurewebsites.net" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="ApiKey" Type="Password" Parent="General Configuration" Editor="String" Title="API Key:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="ClientId" Type="Password" Parent="General Configuration" Editor="String" Title="Client ID:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="ClientSecret" Type="Password" Parent="General Configuration" Editor="String" Title="Client Secret:" Validation="" Default="" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="RefreshToken" Type="OAuth" Parent="General Configuration" Editor="String" Title="Refresh Token:" Validation="" Default="" ListValues="" RequestUrl="[MiddlewareServerUrl]/api/3cx/oauth2/authorize" RequestUrlParameters="response_type=code&amp;client_id=[ClientId]&amp;redirect_uri=[RedirectUri]&amp;state=[State]&amp;code_challenge=[CodeChallenge]" ResponseScenario="OAuthGetAccessToken" />
     <Parameter Name="ReportCallEnabled" Type="Boolean" Parent="" Editor="String" Title="Enable Call Journaling" Validation="" Default="False" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="Subject" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Call Subject:" Validation="" Default="3CX PhoneSystem Call" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="InboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Answered Inbound Call:" Validation="" Default="[DateTime]: Answered incoming call from [Number] [Name] to [Agent] ([Duration])" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="MissedCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Missed Call:" Validation="" Default="[DateTime]: Missed call from [Number] [Name] to [Agent]" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="OutboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Answered Outbound Call:" Validation="" Default="[DateTime]: Answered outgoing call from [Agent] to [Number] [Name] ([Duration])" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
-    <Parameter Name="NotAnsweredOutboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Unanswered Outbound Call:" Validation="" Default="[DateTime]: Unanswered outgoing call from [Agent] to [Number] [Name]" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="InboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Answered Inbound Call:" Validation="" Default="[DateTime]: Answered incoming call from [Number] [Name] to [Agent] ([Duration])[LineBreak][LineBreak]Summary: [Summary][LineBreak][LineBreak]Transcription: [Transcription][LineBreak][LineBreak]Recording: [RecordingUrl]" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="MissedCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Missed Call:" Validation="" Default="[DateTime]: Missed call from [Number] [Name] to [Agent][LineBreak][LineBreak]Summary: [Summary][LineBreak][LineBreak]Transcription: [Transcription]" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="OutboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Answered Outbound Call:" Validation="" Default="[DateTime]: Answered outgoing call from [Agent] to [Number] [Name] ([Duration])[LineBreak][LineBreak]Summary: [Summary][LineBreak][LineBreak]Transcription: [Transcription][LineBreak][LineBreak]Recording: [RecordingUrl]" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="NotAnsweredOutboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Unanswered Outbound Call:" Validation="" Default="[DateTime]: Unanswered outgoing call from [Agent] to [Number] [Name][LineBreak][LineBreak]Summary: [Summary][LineBreak][LineBreak]Transcription: [Transcription]" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
   </Parameters>
   <Authentication Type="Scenario">
     <Value>Auth</Value>
@@ -89,13 +89,21 @@
     </Scenario>
 
     <Scenario Id="ReportCall" Type="REST" EntityId="" EntityOrder="">
-      <Request SkipIf="[ReportCallEnabled]!=True||[EntityId]==&quot;&quot;" Url="[MiddlewareServerUrl]/api/3cx/journal" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
+      <Request SkipIf="[ReportCallEnabled]!=True" Url="[MiddlewareServerUrl]/api/3cx/journal" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
         <PostValues Key="" If="" SkipIf="">
           <Value Key="CallType" If="" SkipIf="" Passes="2" Type="String">[CallType]</Value>
           <Value Key="Number" If="" SkipIf="" Passes="2" Type="String">[Number]</Value>
+          <Value Key="Name" If="" SkipIf="" Passes="1" Type="String">[Name]</Value>
+          <Value Key="DateTime" If="" SkipIf="" Passes="1" Type="String">[DateTime]</Value>
           <Value Key="Duration" If="" SkipIf="" Passes="1" Type="String">[CallDuration]</Value>
           <Value Key="Agent" If="" SkipIf="" Passes="1" Type="String">[Agent]</Value>
+          <Value Key="AgentFirstName" If="" SkipIf="" Passes="1" Type="String">[AgentFirstName]</Value>
+          <Value Key="AgentLastName" If="" SkipIf="" Passes="1" Type="String">[AgentLastName]</Value>
+          <Value Key="AgentEmail" If="" SkipIf="" Passes="1" Type="String">[AgentEmail]</Value>
           <Value Key="RecordUrl" If="" SkipIf="" Passes="1" Type="String">[RecordingUrl]</Value>
+          <Value Key="Transcription" If="" SkipIf="" Passes="1" Type="String">[Transcription]</Value>
+          <Value Key="Summary" If="" SkipIf="" Passes="1" Type="String">[Summary]</Value>
+          <Value Key="Sentiment" If="" SkipIf="" Passes="1" Type="String">[SentimentScore]</Value>
           <Value Key="ContactId" If="" SkipIf="" Passes="1" Type="String">[EntityId]</Value>
           <Value Key="CallDirection" If="" SkipIf="" Passes="1" Type="String">[CallDirection]</Value>
         </PostValues>
