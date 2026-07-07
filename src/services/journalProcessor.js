@@ -130,11 +130,14 @@ async function processCallJournal(accessToken, body) {
         task,
         staff.userId ? { userId: staff.userId } : {}
     );
-    logger.info(`Smokeball task created for journal: subject="${subject}", staffId=${staff.id}`, result);
+    const taskId = result?.id || result?.href || null;
+    logger.info(
+        `Smokeball task created for journal: subject="${subject}", staffId=${staff.id}, taskId=${taskId || 'pending (async)'}`
+    );
 
     return {
         status: 'created',
-        taskId: result?.id || null,
+        taskId,
         staffId: staff.id,
         subject,
     };

@@ -161,6 +161,12 @@ class SmokeballService {
         return this._get(accessToken, url);
     }
 
+    /** List firm staff (paginated). Used when Search fails or returns no match. */
+    async listStaff(accessToken, offset = 0, limit = 500) {
+        const url = this._buildStaffUrl({ Offset: offset, Limit: limit });
+        return this._get(accessToken, url);
+    }
+
     /** Create a task (matterId optional). Returns link object (HTTP 202). */
     async createTask(accessToken, task, options = {}) {
         const url = `${this.apiUrl}/tasks`;

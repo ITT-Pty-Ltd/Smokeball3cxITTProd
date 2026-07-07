@@ -1,4 +1,5 @@
 const smokeballService = require('../services/smokeball');
+const { formatApiError } = require('./formatApiError');
 const { logger } = require('../logger');
 
 function normaliseEmail(value) {
@@ -37,24 +38,49 @@ function pickBestStaffMatch(candidates, { email, fullName }) {
     return active[0];
 }
 
-/**
- * Resolve Smokeball staff for a 3CX agent using email first, then name search.
- * Falls back to config.smokeball.defaultStaffId when lookup fails.
- */
-async function resolveStaffForAgent(accessToken, agent, defaultStaffId) {
+function buildSearchAttempts(agent) {
     const email = (agent.email || '').trim();
     const fullName = [agent.firstName, agent.lastName].filter(Boolean).join(' ').trim();
     const attempts = [];
 
     if (email) {
-        attempts.push({ label: 'email', terms: [`email:${email}`] });
+        attempts.push({ label: 'email-exact', terms: [`email:${email}`] });
+        attempts.push({ label: 'email-wildcard', terms: [`email:*${email}*`] });
     }
     if (fullName) {
-        attempts.push({ label: 'name', terms: [`name:${fullName}`] });
+        attempts.push({ label: 'name-exact', terms: [`name:${fullName}`] });
+        attempts.push({ label: 'name-wildcard', terms: [`name:*${fullName}*`] });
         if (agent.lastName && agent.firstName) {
-            attempts.push({ label: 'name', terms: [`name:${agent.lastName}, ${agent.firstName}`] });
+            const reversed = `${agent.lastName}, ${agent.firstName}`;
+            attempts.push({ label: 'name-reversed', terms: [`name:*${reversed}*`] });
         }
     }
+
+    return { attempts, email, fullName };
+}
+
+async function matchStaffFromList(accessToken, { email, fullName }) {
+    try {
+        const page = await smokeballService.listStaff(accessToken);
+        const match = pickBestStaffMatch(page.value || [], { email, fullName });
+        if (match) {
+            logger.info(
+                `Staff lookup (list): matched ${staffDisplayName(match)} (${match.id})`
+            );
+        }
+        return match;
+    } catch (err) {
+        logger.warn(`Staff lookup (list) failed: ${formatApiError(err)}`);
+        return null;
+    }
+}
+
+/**
+ * Resolve Smokeball staff for a 3CX agent using email first, then name search.
+ * Falls back to config.smokeball.defaultStaffId when lookup fails.
+ */
+async function resolveStaffForAgent(accessToken, agent, defaultStaffId) {
+    const { attempts, email, fullName } = buildSearchAttempts(agent);
 
     for (const attempt of attempts) {
         try {
@@ -67,8 +93,13 @@ async function resolveStaffForAgent(accessToken, agent, defaultStaffId) {
                 return match;
             }
         } catch (err) {
-            logger.warn(`Staff lookup (${attempt.label}) failed:`, err.response?.data || err.message);
+            logger.warn(`Staff lookup (${attempt.label}) failed: ${formatApiError(err)}`);
         }
+    }
+
+    const listMatch = await matchStaffFromList(accessToken, { email, fullName });
+    if (listMatch) {
+        return listMatch;
     }
 
     if (defaultStaffId) {

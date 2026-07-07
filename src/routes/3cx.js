@@ -8,6 +8,7 @@ const contactCache = require('../utils/contactCache');
 const { formatContactFor3cx } = require('../utils/contactFormat');
 const { renderContactPage, renderNotFoundPage } = require('../utils/contactPage');
 const { processCallJournal } = require('../services/journalProcessor');
+const { formatApiError } = require('../utils/formatApiError');
 const { logger } = require('../logger');
 
 const {
@@ -162,10 +163,11 @@ router.post('/journal', async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        logger.error('3CX journal error:', error.response?.data || error.message);
+        const details = formatApiError(error);
+        logger.error(`3CX journal error: ${details}`);
         res.status(error.response?.status || 500).json({
             error: 'Journal processing failed.',
-            details: error.response?.data || error.message,
+            details,
         });
     }
 });
