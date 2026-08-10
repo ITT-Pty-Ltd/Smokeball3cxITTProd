@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Country="AU" Name="Smokeball ITT" Version="4" SupportsEmojis="true" SupportsTranscription="true" ListPageSize="0">
+<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Country="AU" Name="Smokeball ITT" Version="5" SupportsEmojis="true" SupportsTranscription="true" ListPageSize="0">
   <Number Prefix="AsIs" MaxLength="" />
   <Connection MaxConcurrentRequests="2" />
   <Parameters>
@@ -15,6 +15,8 @@
     <Parameter Name="MissedCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Missed Call:" Validation="" Default="[DateTime]: Missed call from [Number] [Name] to [Agent][LineBreak][LineBreak]Summary: [Summary][LineBreak][LineBreak]Transcription: [Transcription]" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="OutboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Answered Outbound Call:" Validation="" Default="[DateTime]: Answered outgoing call from [Agent] to [Number] [Name] ([Duration])[LineBreak][LineBreak]Summary: [Summary][LineBreak][LineBreak]Transcription: [Transcription][LineBreak][LineBreak]Recording: [RecordingUrl]" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
     <Parameter Name="NotAnsweredOutboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Unanswered Outbound Call:" Validation="" Default="[DateTime]: Unanswered outgoing call from [Agent] to [Number] [Name][LineBreak][LineBreak]Summary: [Summary][LineBreak][LineBreak]Transcription: [Transcription]" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="ReportChatEnabled" Type="Boolean" Parent="" Editor="String" Title="Enable Chat Journaling" Validation="" Default="False" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
+    <Parameter Name="ChatSubject" Type="String" Parent="ReportChatEnabled" Editor="String" Title="Chat Subject:" Validation="" Default="3CX Chat / SMS" ListValues="" RequestUrl="" RequestUrlParameters="" ResponseScenario="" />
   </Parameters>
   <Authentication Type="Scenario">
     <Value>Auth</Value>
@@ -63,6 +65,7 @@
       </Outputs>
     </Scenario>
 
+    <!-- Phone number lookup (caller ID) -->
     <Scenario Id="" Type="REST" EntityId="Contacts" EntityOrder="[LookupOrder]">
       <Request SkipIf="" Url="[MiddlewareServerUrl]/api/3cx/lookup?number=[Number]" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json" />
       <Rules>
@@ -73,7 +76,9 @@
         <Variable Name="FirstName" LookupValue="" Path="contacts.firstName"><Filter /></Variable>
         <Variable Name="LastName" LookupValue="" Path="contacts.lastName"><Filter /></Variable>
         <Variable Name="CompanyName" LookupValue="" Path="contacts.company"><Filter /></Variable>
-        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phone"><Filter /></Variable>
+        <Variable Name="PhoneBusiness" LookupValue="" Path="contacts.phoneBusiness"><Filter /></Variable>
+        <Variable Name="PhoneBusiness2" LookupValue="" Path="contacts.phoneBusiness2"><Filter /></Variable>
+        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phoneMobile"><Filter /></Variable>
         <Variable Name="Email" LookupValue="" Path="contacts.email"><Filter /></Variable>
       </Variables>
       <Outputs AllowEmpty="true">
@@ -81,6 +86,68 @@
         <Output Type="FirstName" Passes="0" Value="[FirstName]" />
         <Output Type="LastName" Passes="0" Value="[LastName]" />
         <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
+        <Output Type="PhoneBusiness" Passes="0" Value="[PhoneBusiness]" />
+        <Output Type="PhoneBusiness2" Passes="0" Value="[PhoneBusiness2]" />
+        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
+        <Output Type="Email" Passes="0" Value="[Email]" />
+        <Output Type="EntityType" Passes="0" Value="Contacts" />
+        <Output Type="EntityId" Passes="0" Value="[Id]" />
+      </Outputs>
+    </Scenario>
+
+    <!-- Email lookup -->
+    <Scenario Id="LookupByEmail" Type="REST" EntityId="Contacts" EntityOrder="">
+      <Request SkipIf="" Url="[MiddlewareServerUrl]/api/3cx/lookup?email=[Email]" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json" />
+      <Rules>
+        <Rule Type="Any" Ethalon="">contacts.id</Rule>
+      </Rules>
+      <Variables>
+        <Variable Name="Id" LookupValue="" Path="contacts.id"><Filter /></Variable>
+        <Variable Name="FirstName" LookupValue="" Path="contacts.firstName"><Filter /></Variable>
+        <Variable Name="LastName" LookupValue="" Path="contacts.lastName"><Filter /></Variable>
+        <Variable Name="CompanyName" LookupValue="" Path="contacts.company"><Filter /></Variable>
+        <Variable Name="PhoneBusiness" LookupValue="" Path="contacts.phoneBusiness"><Filter /></Variable>
+        <Variable Name="PhoneBusiness2" LookupValue="" Path="contacts.phoneBusiness2"><Filter /></Variable>
+        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phoneMobile"><Filter /></Variable>
+        <Variable Name="Email" LookupValue="" Path="contacts.email"><Filter /></Variable>
+      </Variables>
+      <Outputs AllowEmpty="true">
+        <Output Type="ContactUrl" Passes="0" Value="[MiddlewareServerUrl]/api/3cx/contacts/[Id]/open" />
+        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
+        <Output Type="LastName" Passes="0" Value="[LastName]" />
+        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
+        <Output Type="PhoneBusiness" Passes="0" Value="[PhoneBusiness]" />
+        <Output Type="PhoneBusiness2" Passes="0" Value="[PhoneBusiness2]" />
+        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
+        <Output Type="Email" Passes="0" Value="[Email]" />
+        <Output Type="EntityType" Passes="0" Value="Contacts" />
+        <Output Type="EntityId" Passes="0" Value="[Id]" />
+      </Outputs>
+    </Scenario>
+
+    <!-- Free-text search from 3CX client (name, number, or email) -->
+    <Scenario Id="SearchContacts" Type="REST" EntityId="Contacts" EntityOrder="">
+      <Request SkipIf="" Url="[MiddlewareServerUrl]/api/3cx/search?q=[SearchText]" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json" />
+      <Rules>
+        <Rule Type="Any" Ethalon="">contacts.id</Rule>
+      </Rules>
+      <Variables>
+        <Variable Name="Id" LookupValue="" Path="contacts.id"><Filter /></Variable>
+        <Variable Name="FirstName" LookupValue="" Path="contacts.firstName"><Filter /></Variable>
+        <Variable Name="LastName" LookupValue="" Path="contacts.lastName"><Filter /></Variable>
+        <Variable Name="CompanyName" LookupValue="" Path="contacts.company"><Filter /></Variable>
+        <Variable Name="PhoneBusiness" LookupValue="" Path="contacts.phoneBusiness"><Filter /></Variable>
+        <Variable Name="PhoneBusiness2" LookupValue="" Path="contacts.phoneBusiness2"><Filter /></Variable>
+        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phoneMobile"><Filter /></Variable>
+        <Variable Name="Email" LookupValue="" Path="contacts.email"><Filter /></Variable>
+      </Variables>
+      <Outputs AllowEmpty="true">
+        <Output Type="ContactUrl" Passes="0" Value="[MiddlewareServerUrl]/api/3cx/contacts/[Id]/open" />
+        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
+        <Output Type="LastName" Passes="0" Value="[LastName]" />
+        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
+        <Output Type="PhoneBusiness" Passes="0" Value="[PhoneBusiness]" />
+        <Output Type="PhoneBusiness2" Passes="0" Value="[PhoneBusiness2]" />
         <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
         <Output Type="Email" Passes="0" Value="[Email]" />
         <Output Type="EntityType" Passes="0" Value="Contacts" />
@@ -106,6 +173,27 @@
           <Value Key="Sentiment" If="" SkipIf="" Passes="1" Type="String">[SentimentScore]</Value>
           <Value Key="ContactId" If="" SkipIf="" Passes="1" Type="String">[EntityId]</Value>
           <Value Key="CallDirection" If="" SkipIf="" Passes="1" Type="String">[CallDirection]</Value>
+        </PostValues>
+      </Request>
+      <Variables />
+      <Outputs AllowEmpty="false" />
+    </Scenario>
+
+    <Scenario Id="ReportChat" Type="REST" EntityId="" EntityOrder="">
+      <Request SkipIf="[ReportChatEnabled]!=True" Url="[MiddlewareServerUrl]/api/3cx/chat-journal" MessagePasses="0" Message="" RequestContentType="" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
+        <PostValues Key="" If="" SkipIf="">
+          <Value Key="ChatType" If="" SkipIf="" Passes="1" Type="String">[ChatSubject]</Value>
+          <Value Key="Number" If="" SkipIf="" Passes="1" Type="String">[Number]</Value>
+          <Value Key="Email" If="" SkipIf="" Passes="1" Type="String">[Email]</Value>
+          <Value Key="Name" If="" SkipIf="" Passes="1" Type="String">[Name]</Value>
+          <Value Key="DateTime" If="" SkipIf="" Passes="1" Type="String">[DateTime]</Value>
+          <Value Key="Duration" If="" SkipIf="" Passes="1" Type="String">[Duration]</Value>
+          <Value Key="Agent" If="" SkipIf="" Passes="1" Type="String">[Agent]</Value>
+          <Value Key="AgentFirstName" If="" SkipIf="" Passes="1" Type="String">[AgentFirstName]</Value>
+          <Value Key="AgentLastName" If="" SkipIf="" Passes="1" Type="String">[AgentLastName]</Value>
+          <Value Key="AgentEmail" If="" SkipIf="" Passes="1" Type="String">[AgentEmail]</Value>
+          <Value Key="ChatMessages" If="" SkipIf="" Passes="1" Type="String">[ChatMessages]</Value>
+          <Value Key="ContactId" If="" SkipIf="" Passes="1" Type="String">[EntityId]</Value>
         </PostValues>
       </Request>
       <Variables />

@@ -7,7 +7,7 @@ const { getAccessTokenFromReq } = require('../utils/auth');
 const contactCache = require('../utils/contactCache');
 const { formatContactFor3cx } = require('../utils/contactFormat');
 const { renderContactPage, renderNotFoundPage } = require('../utils/contactPage');
-const { processCallJournal } = require('../services/journalProcessor');
+const { processCallJournal, processChatJournal } = require('../services/journalProcessor');
 const { formatApiError } = require('../utils/formatApiError');
 const { logger } = require('../logger');
 
@@ -18,6 +18,15 @@ const {
     redirectUri: appCallbackUrl,
     oauthMode,
 } = config.smokeball;
+
+function to3cxContact(contact, dialNumber) {
+    const result = {
+        ...formatContactFor3cx(contact, dialNumber),
+        contactUrl: smokeballService.buildContactOpenUrl(contact.id),
+    };
+    contactCache.set(contact.id, result);
+    return result;
+}
 
 // ---------------------------------------------------------------------------
 // Proxy Auth Endpoints (Stateless Auth for 3CX)
@@ -94,7 +103,7 @@ router.post('/oauth2/token', async (req, res) => {
 // ---------------------------------------------------------------------------
 
 router.get('/lookup', async (req, res) => {
-    const { number } = req.query;
+    const { number, email } = req.query;
     const token = getAccessTokenFromReq(req);
 
     if (!token) {
@@ -102,27 +111,26 @@ router.get('/lookup', async (req, res) => {
         return res.status(401).json({ error: 'Missing access token in Authorization header.' });
     }
 
-    if (!number) {
-        return res.status(400).json({ error: 'Missing phone number.' });
+    if (!number && !email) {
+        return res.status(400).json({ error: 'Missing phone number or email.' });
     }
 
-    logger.info(`3CX lookup for number: ${number}`);
-
     try {
-        const contact = await smokeballService.searchContactByPhone(token, number);
+        let contact = null;
+        if (email) {
+            logger.info(`3CX lookup for email: ${email}`);
+            contact = await smokeballService.searchContactByEmail(token, email);
+        } else {
+            logger.info(`3CX lookup for number: ${number}`);
+            contact = await smokeballService.searchContactByPhone(token, number);
+        }
 
         if (!contact) {
-            logger.info(`No Smokeball contact found for ${number}`);
+            logger.info(`No Smokeball contact found for ${email || number}`);
             return res.status(200).json({ contacts: [] });
         }
 
-        const result = {
-            ...formatContactFor3cx(contact, number),
-            contactUrl: smokeballService.buildContactOpenUrl(contact.id),
-        };
-
-        contactCache.set(contact.id, result);
-
+        const result = to3cxContact(contact, number || undefined);
         const displayName =
             result.company ||
             [result.firstName, result.lastName].filter(Boolean).join(' ') ||
@@ -138,7 +146,40 @@ router.get('/lookup', async (req, res) => {
     }
 });
 
-/** Browser-friendly contact card (no Smokeball auth required). Populated during lookup. */
+/**
+ * Free-text search for 3CX SearchContacts (name, number, or email).
+ * GET /api/3cx/search?q=
+ */
+router.get('/search', async (req, res) => {
+    const q = req.query.q || req.query.search || req.query.SearchText || '';
+    const token = getAccessTokenFromReq(req);
+
+    if (!token) {
+        logger.warn('Missing access token in /search request');
+        return res.status(401).json({ error: 'Missing access token in Authorization header.' });
+    }
+
+    if (!String(q).trim()) {
+        return res.status(400).json({ error: 'Missing search query.' });
+    }
+
+    logger.info(`3CX search: ${q}`);
+
+    try {
+        const found = await smokeballService.searchContactsByText(token, q, 10);
+        const contacts = found.map((c) => to3cxContact(c));
+        logger.info(`3CX search returned ${contacts.length} contact(s)`);
+        res.json({ contacts });
+    } catch (error) {
+        logger.error('3CX search error:', error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({
+            error: 'Search failed.',
+            details: error.response?.data || error.message,
+        });
+    }
+});
+
+/** Browser-friendly contact card (no Smokeball auth required). Populated during lookup/search. */
 router.get('/contacts/:id/open', (req, res) => {
     const cached = contactCache.get(req.params.id);
     if (!cached) {
@@ -167,6 +208,31 @@ router.post('/journal', async (req, res) => {
         logger.error(`3CX journal error: ${details}`);
         res.status(error.response?.status || 500).json({
             error: 'Journal processing failed.',
+            details,
+        });
+    }
+});
+
+router.post('/chat-journal', async (req, res) => {
+    const token = getAccessTokenFromReq(req);
+    if (!token) {
+        logger.warn('Missing access token in /chat-journal request');
+        return res.status(401).json({ error: 'Missing access token in Authorization header.' });
+    }
+
+    logger.info('3CX chat journal received', req.body);
+
+    try {
+        const result = await processChatJournal(token, req.body);
+        if (result.status === 'failed') {
+            return res.status(422).json(result);
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        const details = formatApiError(error);
+        logger.error(`3CX chat journal error: ${details}`);
+        res.status(error.response?.status || 500).json({
+            error: 'Chat journal processing failed.',
             details,
         });
     }

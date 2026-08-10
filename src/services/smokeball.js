@@ -202,6 +202,48 @@ class SmokeballService {
         return this._get(accessToken, url);
     }
 
+    _buildMattersUrl(queryParams) {
+        const params = new URLSearchParams();
+        for (const [key, value] of Object.entries(queryParams)) {
+            if (value == null) continue;
+            if (Array.isArray(value)) {
+                for (const item of value) {
+                    params.append(key, item);
+                }
+            } else {
+                params.append(key, String(value));
+            }
+        }
+        return `${this.apiUrl}/matters?${params.toString()}`;
+    }
+
+    /** List matters (ContactId / Status filters supported). */
+    async listMatters(accessToken, { contactId, status, offset = 0, limit = 50 } = {}) {
+        const query = { Offset: offset, Limit: limit };
+        if (contactId) query.ContactId = contactId;
+        if (status) query.Status = Array.isArray(status) ? status : [status];
+        return this._get(accessToken, this._buildMattersUrl(query));
+    }
+
+    /** Create a time/fixed fee on a matter (HTTP 202 Link). */
+    async createFee(accessToken, matterId, fee, options = {}) {
+        const url = `${this.apiUrl}/matters/${matterId}/fees`;
+        const headers = {};
+        if (options.requestId) headers.RequestId = options.requestId;
+        if (options.userId) headers.UserId = options.userId;
+        return this._post(accessToken, url, fee, headers);
+    }
+
+    async _refreshContact(accessToken, contact) {
+        if (!contact?.id) return contact;
+        try {
+            return await this.fetchContactById(accessToken, contact.id);
+        } catch (err) {
+            logger.warn(`Could not refresh contact ${contact.id}, using search result:`, err.message);
+            return contact;
+        }
+    }
+
     /**
      * Search contacts by phone number using Smokeball's Search parameter,
      * collect all matches, then return the most recently updated contact.
@@ -235,12 +277,73 @@ class SmokeballService {
             );
         }
 
-        try {
-            return await this.fetchContactById(accessToken, best.id);
-        } catch (err) {
-            logger.warn(`Could not refresh contact ${best.id}, using search result:`, err.message);
-            return best;
+        return this._refreshContact(accessToken, best);
+    }
+
+    /** Lookup a single contact by email (exact then wildcard). */
+    async searchContactByEmail(accessToken, email) {
+        const normalised = (email || '').trim().toLowerCase();
+        if (!normalised || !normalised.includes('@')) return null;
+
+        const attempts = [`email:${normalised}`, `email:*${normalised}*`];
+        for (const term of attempts) {
+            logger.info(`Smokeball email search: ${term}`);
+            const page = await this.searchContacts(accessToken, [term]);
+            const contacts = (page.value || []).filter((c) => {
+                const personEmail = (c.person?.email || '').toLowerCase();
+                const companyEmail = (c.company?.email || '').toLowerCase();
+                return personEmail === normalised || companyEmail === normalised;
+            });
+            const best = pickBestContactMatch(contacts.length ? contacts : page.value || []);
+            if (best) return this._refreshContact(accessToken, best);
         }
+        return null;
+    }
+
+    /**
+     * Free-text search for 3CX SearchContacts (name, phone, or email).
+     * Returns up to `limit` contacts, most recently updated first.
+     */
+    async searchContactsByText(accessToken, searchText, limit = 10) {
+        const q = (searchText || '').trim();
+        if (!q) return [];
+
+        const digits = q.replace(/\D/g, '');
+        const looksLikeEmail = q.includes('@');
+        const looksLikePhone = digits.length >= 4 && digits.length >= q.replace(/\s+/g, '').length * 0.6;
+
+        const termSets = [];
+        if (looksLikeEmail) {
+            termSets.push([`email:*${q}*`]);
+        } else if (looksLikePhone) {
+            for (const term of buildPhoneSearchTerms(q)) {
+                termSets.push([term]);
+            }
+        } else {
+            termSets.push([`name:*${q}*`]);
+            // Also try email/phone when the query is ambiguous
+            termSets.push([`email:*${q}*`]);
+            if (digits.length >= 4) {
+                termSets.push([`phone:*${digits}*`]);
+            }
+        }
+
+        const byId = new Map();
+        for (const terms of termSets) {
+            logger.info(`Smokeball text search: ${terms.join(', ')}`);
+            const page = await this.searchContacts(accessToken, terms, 0, Math.max(limit, 25));
+            for (const contact of page.value || []) {
+                if (contact?.id && !byId.has(contact.id)) {
+                    byId.set(contact.id, contact);
+                }
+            }
+            if (byId.size >= limit) break;
+        }
+
+        const ranked = [...byId.values()].sort(
+            (a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0)
+        );
+        return ranked.slice(0, limit);
     }
 }
 

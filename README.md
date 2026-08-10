@@ -80,7 +80,9 @@ Use this when you cannot register the middleware URL in Smokeball. The middlewar
 
 ---
 
-## Caller ID lookup flow
+## Contact matching, search, and popping
+
+### Caller ID lookup (inbound / outbound)
 
 When a call arrives, 3CX calls the middleware:
 
@@ -92,10 +94,10 @@ Authorization: Bearer {access_token}
 The middleware:
 
 1. Validates the Bearer token from 3CX.
-2. Queries Smokeball `GET /contacts/` with the `Search` parameter (e.g. `phone:*412345678*`) — typically one API call per lookup instead of paging the full contact list.
-3. Verifies matches locally on person (`phone`, `phone2`, `cell`) and company (`phone`) using suffix matching (handles different formats).
-4. Retries on `429 Too Many Requests` and `5xx` errors with exponential backoff (honors `Retry-After` when present).
-5. Returns a JSON payload 3CX expects:
+2. Queries Smokeball `GET /contacts/` with the `Search` parameter (e.g. `phone:*412345678*`).
+3. Verifies matches locally on person (`phone`, `phone2`, `cell`) and company (`phone`) using suffix matching.
+4. Retries on `429` / `5xx` with exponential backoff.
+5. Returns contact name + phone/email fields so 3CX can show caller ID and optionally sync into the **company phonebook**.
 
 ```json
 {
@@ -105,13 +107,29 @@ The middleware:
     "lastName": "...",
     "company": "...",
     "phone": "...",
+    "phoneBusiness": "...",
+    "phoneMobile": "...",
     "email": "...",
     "contactUrl": "https://<middleware>/api/3cx/contacts/{id}/open"
   }]
 }
 ```
 
-If no match is found, it returns `{ "contacts": [] }`.
+**Phonebook sync:** In 3CX CRM settings, enable **Add CRM contacts to 3CX company phonebook** so matched contacts are stored without manual entry. Keep Entity IDs stable (this middleware always returns the most recently updated Smokeball contact for a number).
+
+### Search from the 3CX client
+
+Users can search Smokeball from the 3CX interface (name, number, or email):
+
+```
+GET /api/3cx/search?q={SearchText}
+```
+
+The CRM template includes a `SearchContacts` scenario (and `LookupByEmail`) — re-upload template **v5**.
+
+### Contact pop on answer (desktop)
+
+`ContactUrl` points at the middleware contact page. On the 3CX desktop/web client, enable opening the CRM contact when a call is answered so the matched Smokeball contact card opens automatically.
 
 ---
 
@@ -126,28 +144,53 @@ Authorization: Bearer {access_token}
 
 The middleware:
 
-1. Receives call metadata from 3CX (including AI **transcription**, **summary**, **recording URL**, and agent details when available).
-2. **Looks up the Smokeball staff member** who handled the call — by `AgentEmail` first, then by `AgentFirstName` + `AgentLastName` via `GET /staff?Search=...`.
-3. Creates a **Smokeball task** (`POST /tasks`) assigned to that staff member — **no matter linkage**.
-4. Puts full call details (summary, transcription, recording link, contact info) in the task **note**.
+1. Receives call metadata (AI **summary**, **transcription**, **recording URL**, duration, agent, matched contact).
+2. Resolves **Smokeball staff** (agent email → name → `SMOKEBALL_DEFAULT_STAFF_ID`).
+3. Resolves the contact’s **open/pending matter** (`GET /matters?ContactId=...`).
+4. Creates a **Smokeball task** on that matter (`POST /tasks` with `matterId`) including contact, staff, start time, duration, summary, speaker-labeled transcript, and recording link.
+5. Optionally creates a **time fee** on the matter (`POST /matters/{id}/fees`, `feeType=Time`) for auto time-costing.
 
-Journal **all** call types (inbound, outbound, missed, unanswered), including calls without a matched CRM contact.
+### Speaker-labeled transcripts
+
+Transcriptions are normalised so each turn identifies the speaker, e.g.:
+
+```
+Deana Hanna – "Thanks for calling"
+John Smith – "I need to discuss the contract"
+```
+
+Generic labels (`Agent`, `Speaker 1`, …) are mapped to the 3CX agent name and matched contact name when possible.
+
+### Optional journaling (not every call)
+
+You can choose which calls become tasks:
+
+| Control | Where | Effect |
+|---------|--------|--------|
+| **Enable Call Journaling** | 3CX CRM UI | Master on/off for the PBX |
+| `JOURNAL_CREATE_TASKS` | Middleware env | `false` = receive journals but create no tasks |
+| `JOURNAL_REQUIRE_CONTACT=true` | Middleware env | Skip unmatched numbers (telemarketers / solicitor shopping) |
+| `JOURNAL_REQUIRE_MATTER=true` | Middleware env | Skip when contact has no open/pending matter |
+| `JOURNAL_SKIP_MISSED=true` | Middleware env | Skip missed / unanswered call types |
+| `JOURNAL_CREATE_TIME_ENTRIES` | Middleware env | Auto time-cost onto the matter (`true` default) |
+
+### Chat journaling (SMS / MMS / chat)
+
+When **Enable Chat Journaling** is on, 3CX posts to:
+
+```
+POST /api/3cx/chat-journal
+```
+
+Creates a Smokeball task (matter-linked when possible) with the full `[ChatMessages]` thread.
 
 ### 3CX prerequisites
 
-- Enable **Call Journaling** in the CRM integration settings.
-- Ensure each extension has **email** and **name** filled in (used for staff lookup).
-- Enable call recording + AI transcription in 3CX for transcript/summary fields to populate.
-- Re-upload `3cx_smokeball_template_fixed.xml` if your template predates transcription fields.
-
-### Environment variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `JOURNAL_CREATE_TASKS` | No | `true` (default) — create Smokeball tasks; `false` — log only |
-| `SMOKEBALL_DEFAULT_STAFF_ID` | Recommended | Fallback Smokeball staff GUID when agent lookup fails |
-
-Confirm your Smokeball OAuth app includes **Tasks** and **Staff** API scopes.
+- Re-upload `3cx_smokeball_template_fixed.xml` (**Version 5**).
+- Enable **Call Journaling** / **Chat Journaling** as needed.
+- Ensure each extension has **email** and **name** (staff lookup).
+- Enable call recording + AI transcription for transcript/summary fields.
+- Confirm Smokeball OAuth app scopes include **Tasks**, **Staff**, **Matters**, and **Fees**.
 
 ---
 
@@ -158,7 +201,10 @@ Confirm your Smokeball OAuth app includes **Tasks** and **Staff** API scopes.
 | `GET` | `/api/3cx/oauth2/authorize` | OAuth authorize proxy (3CX → Smokeball) |
 | `POST` | `/api/3cx/oauth2/token` | OAuth token proxy (3CX ↔ Smokeball) |
 | `GET` | `/api/3cx/lookup?number=` | Contact lookup by phone |
+| `GET` | `/api/3cx/lookup?email=` | Contact lookup by email |
+| `GET` | `/api/3cx/search?q=` | Free-text search (name / number / email) |
 | `POST` | `/api/3cx/journal` | Receive call journal events |
+| `POST` | `/api/3cx/chat-journal` | Receive chat / SMS journal events |
 | `GET` | `/auth/callback` | OAuth callback (Smokeball → middleware → 3CX) |
 | `GET` | `/api/smokeball/contacts` | Debug: list contacts (requires Bearer token) |
 | `GET` | `/api/smokeball/contacts/search?phone=` | Debug: search by phone |
@@ -182,11 +228,13 @@ Legacy paths `/lookup` and `/journal` (without `/api/3cx`) are supported for old
     ├── config.js                  # Environment configuration
     ├── logger.js                  # Winston + in-memory log buffer
     ├── routes/
-    │   ├── 3cx.js                 # OAuth proxy, lookup, journal
+    │   ├── 3cx.js                 # OAuth proxy, lookup, search, journal, chat
     │   ├── smokeball.js           # Direct API routes (debug)
     │   └── auth.js                # Legacy info routes
-    ├── services/smokeball.js      # Smokeball API client
-    └── utils/auth.js              # Bearer token helpers
+    ├── services/
+    │   ├── smokeball.js           # Smokeball API client
+    │   └── journalProcessor.js   # Call/chat → tasks + time entries
+    └── utils/                     # auth, contact cache/format, matter/staff lookup, transcripts
 ```
 
 ---
@@ -210,8 +258,13 @@ Copy `.env.example` to `.env` for local development.
 | `SMOKEBALL_MAX_RETRIES` | No | Retries on 429/5xx (default `3`) |
 | `SMOKEBALL_RETRY_BASE_DELAY_MS` | No | Initial backoff delay in ms (default `500`) |
 | `SMOKEBALL_SEARCH_LIMIT` | No | Max contacts returned per search query (default `50`) |
-| `JOURNAL_CREATE_TASKS` | No | Create Smokeball tasks from call journal (`true` default) |
+| `JOURNAL_CREATE_TASKS` | No | Create Smokeball tasks from call/chat journal (`true` default) |
+| `JOURNAL_REQUIRE_CONTACT` | No | Skip journal when no CRM contact matched (`false` default; set `true` to filter junk calls) |
+| `JOURNAL_REQUIRE_MATTER` | No | Skip journal when no open/pending matter (`false` default) |
+| `JOURNAL_CREATE_TIME_ENTRIES` | No | Auto-create time fees on the matter (`true` default) |
+| `JOURNAL_SKIP_MISSED` | No | Skip missed/unanswered call types (`false` default) |
 | `SMOKEBALL_DEFAULT_STAFF_ID` | Recommended | Fallback staff GUID when 3CX agent lookup fails |
+| `SMOKEBALL_TIME_ACTIVITY_CODE` | No | Optional activity code on time fees (e.g. `TEL`) |
 
 **Never commit `.env`** — it is listed in `.gitignore`.
 

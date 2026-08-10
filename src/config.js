@@ -58,9 +58,19 @@ const config = {
         retryBaseDelayMs: Number(process.env.SMOKEBALL_RETRY_BASE_DELAY_MS) || 500,
         searchResultLimit: Number(process.env.SMOKEBALL_SEARCH_LIMIT) || 50,
         defaultStaffId: process.env.SMOKEBALL_DEFAULT_STAFF_ID || null,
+        timeActivityCode: process.env.SMOKEBALL_TIME_ACTIVITY_CODE || null,
     },
     journal: {
+        /** Create Smokeball tasks from call/chat journals (3CX Enable Call/Chat Journaling still required). */
         createTasks: process.env.JOURNAL_CREATE_TASKS !== 'false',
+        /** Skip journaling when no CRM contact was matched (filters solicitor-shopping / telemarketers). */
+        requireContact: process.env.JOURNAL_REQUIRE_CONTACT === 'true',
+        /** Skip task creation when no matter can be resolved for the contact. */
+        requireMatter: process.env.JOURNAL_REQUIRE_MATTER === 'true',
+        /** Create a time fee on the matter when a matter is resolved. */
+        createTimeEntries: process.env.JOURNAL_CREATE_TIME_ENTRIES !== 'false',
+        /** Skip missed / unanswered outbound call types. */
+        skipMissed: process.env.JOURNAL_SKIP_MISSED === 'true',
     },
 };
 
