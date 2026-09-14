@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Country="AU" Name="Smokeball ITT" Version="5" SupportsEmojis="true" SupportsTranscription="true" ListPageSize="0">
+<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Country="AU" Name="Smokeball ITT" Version="6" SupportsEmojis="true" SupportsTranscription="true" ListPageSize="0">
   <Number Prefix="AsIs" MaxLength="" />
   <Connection MaxConcurrentRequests="2" />
   <Parameters>
@@ -78,7 +78,7 @@
         <Variable Name="CompanyName" LookupValue="" Path="contacts.company"><Filter /></Variable>
         <Variable Name="PhoneBusiness" LookupValue="" Path="contacts.phoneBusiness"><Filter /></Variable>
         <Variable Name="PhoneBusiness2" LookupValue="" Path="contacts.phoneBusiness2"><Filter /></Variable>
-        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phoneMobile"><Filter /></Variable>
+        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phone"><Filter /></Variable>
         <Variable Name="Email" LookupValue="" Path="contacts.email"><Filter /></Variable>
       </Variables>
       <Outputs AllowEmpty="true">
@@ -108,7 +108,7 @@
         <Variable Name="CompanyName" LookupValue="" Path="contacts.company"><Filter /></Variable>
         <Variable Name="PhoneBusiness" LookupValue="" Path="contacts.phoneBusiness"><Filter /></Variable>
         <Variable Name="PhoneBusiness2" LookupValue="" Path="contacts.phoneBusiness2"><Filter /></Variable>
-        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phoneMobile"><Filter /></Variable>
+        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phone"><Filter /></Variable>
         <Variable Name="Email" LookupValue="" Path="contacts.email"><Filter /></Variable>
       </Variables>
       <Outputs AllowEmpty="true">
@@ -138,7 +138,7 @@
         <Variable Name="CompanyName" LookupValue="" Path="contacts.company"><Filter /></Variable>
         <Variable Name="PhoneBusiness" LookupValue="" Path="contacts.phoneBusiness"><Filter /></Variable>
         <Variable Name="PhoneBusiness2" LookupValue="" Path="contacts.phoneBusiness2"><Filter /></Variable>
-        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phoneMobile"><Filter /></Variable>
+        <Variable Name="PhoneMobile" LookupValue="" Path="contacts.phone"><Filter /></Variable>
         <Variable Name="Email" LookupValue="" Path="contacts.email"><Filter /></Variable>
       </Variables>
       <Outputs AllowEmpty="true">

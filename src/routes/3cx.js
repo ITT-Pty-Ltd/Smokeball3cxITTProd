@@ -103,7 +103,8 @@ router.post('/oauth2/token', async (req, res) => {
 // ---------------------------------------------------------------------------
 
 router.get('/lookup', async (req, res) => {
-    const { number, email } = req.query;
+    const number = req.query.number ? String(req.query.number).trim() : '';
+    const email = req.query.email ? String(req.query.email).trim() : '';
     const token = getAccessTokenFromReq(req);
 
     if (!token) {

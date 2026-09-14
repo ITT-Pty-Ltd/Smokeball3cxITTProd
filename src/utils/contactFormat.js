@@ -19,6 +19,9 @@ function formatContactFor3cx(contact, dialNumber) {
     const hasPerson = Boolean(person.firstName || person.lastName);
     const companyName = company.name || '';
 
+    // 3CX caller ID requires a phone output to exactly match the searched [Number].
+    const dialled = dialNumber ? String(dialNumber).trim() : '';
+
     let phoneBusiness =
         formatPhoneDisplay(person.phone) ||
         formatPhoneDisplay(company.phone) ||
@@ -26,8 +29,10 @@ function formatContactFor3cx(contact, dialNumber) {
     const phoneBusiness2 = formatPhoneDisplay(person.phone2) || '';
     let phoneMobile = formatPhoneDisplay(person.cell) || '';
 
-    // Ensure the dialled/searched number appears on at least one 3CX phone field (phonebook sync)
-    if (dialNumber) {
+    if (dialled) {
+        // Primary fields must echo the dialled number exactly for 3CX CRM lookup rules.
+        phoneMobile = dialled;
+    } else {
         const known = [phoneMobile, phoneBusiness, phoneBusiness2];
         const alreadyPresent = known.some((p) => p && phoneDigitsMatch(dialNumber, p));
         if (!alreadyPresent) {
@@ -36,7 +41,7 @@ function formatContactFor3cx(contact, dialNumber) {
         }
     }
 
-    const primaryPhone = dialNumber || phoneMobile || phoneBusiness || phoneBusiness2 || '';
+    const primaryPhone = dialled || phoneMobile || phoneBusiness || phoneBusiness2 || '';
 
     const base = {
         id: contact.id,

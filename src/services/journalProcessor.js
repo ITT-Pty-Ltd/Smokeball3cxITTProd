@@ -1,5 +1,6 @@
 const config = require('../config');
 const smokeballService = require('./smokeball');
+const contactCache = require('../utils/contactCache');
 const { resolveStaffForAgent, staffDisplayName } = require('../utils/staffLookup');
 const { resolveMatterForContact, matterDisplayName } = require('../utils/matterLookup');
 const { formatTranscriptWithSpeakers } = require('../utils/transcriptFormat');
@@ -163,9 +164,25 @@ async function resolveJournalActors(accessToken, body) {
         config.smokeball.defaultStaffId
     );
 
-    const contactId = pickString(body, 'ContactId', 'contactId', 'EntityId', 'entityId');
+    let contactId = pickString(body, 'ContactId', 'contactId', 'EntityId', 'entityId');
+    const dialNumber = pickString(body, 'Number', 'number');
+    let cached = null;
+
+    if (!contactId && dialNumber) {
+        cached = contactCache.getByPhone(dialNumber);
+        if (cached?.id) {
+            contactId = cached.id;
+            logger.info(`Journal: resolved contact ${contactId} from lookup cache for ${dialNumber}`);
+        }
+    }
+
+    const cachedName = cached
+        ? [cached.firstName, cached.lastName].filter(Boolean).join(' ') || cached.company || ''
+        : '';
     const contactName =
-        pickString(body, 'Name', 'name') || (await resolveContactName(accessToken, contactId));
+        pickString(body, 'Name', 'name') ||
+        cachedName ||
+        (await resolveContactName(accessToken, contactId));
 
     const matter = contactId ? await resolveMatterForContact(accessToken, contactId) : null;
 
