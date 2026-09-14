@@ -4,6 +4,7 @@ const contactCache = require('../utils/contactCache');
 const { resolveStaffForAgent, staffDisplayName } = require('../utils/staffLookup');
 const { resolveMatterForContact, matterDisplayName } = require('../utils/matterLookup');
 const { formatTranscriptWithSpeakers } = require('../utils/transcriptFormat');
+const { extractCallJournalAiFields, truncateTaskNote } = require('../utils/journalFields');
 const { durationToMinutes, durationToIso8601 } = require('../utils/duration');
 const { formatApiError } = require('../utils/formatApiError');
 const { logger } = require('../logger');
@@ -55,8 +56,16 @@ function buildAgentLabel(payload) {
         : pickString(payload, 'Agent', 'agent');
 }
 
-function buildCallTaskNote(payload, contactName, staff, matter, formattedTranscript) {
+function buildCallTaskNote(payload, contactName, staff, matter, aiFields, formattedTranscript) {
     const lines = [];
+
+    // AI content first — most important for staff reviewing the task.
+    appendSection(lines, 'Summary', aiFields.summary);
+    appendSection(lines, 'Notes', aiFields.aiNotes);
+    appendSection(lines, 'Action items', aiFields.actionItems);
+    appendSection(lines, 'Transcription', formattedTranscript);
+    appendSection(lines, 'Sentiment', aiFields.sentiment);
+    appendSection(lines, 'Recording', aiFields.recordingUrl);
 
     appendSection(lines, 'Call type', pickString(payload, 'CallType', 'callType'));
     appendSection(lines, 'Direction', pickString(payload, 'CallDirection', 'callDirection'));
@@ -81,20 +90,7 @@ function buildCallTaskNote(payload, contactName, staff, matter, formattedTranscr
         );
     }
 
-    appendSection(lines, 'Summary', pickString(payload, 'Summary', 'summary'));
-    appendSection(lines, 'Transcription', formattedTranscript);
-    appendSection(
-        lines,
-        'Sentiment',
-        pickString(payload, 'Sentiment', 'sentiment', 'SentimentScore', 'sentimentScore')
-    );
-    appendSection(
-        lines,
-        'Recording',
-        pickString(payload, 'RecordUrl', 'recordUrl', 'RecordingUrl', 'recordingUrl')
-    );
-
-    return lines.join('\n').trim();
+    return truncateTaskNote(lines.join('\n').trim());
 }
 
 function buildChatTaskNote(payload, contactName, staff, matter) {
@@ -282,14 +278,27 @@ async function processCallJournal(accessToken, body) {
         };
     }
 
-    const rawTranscript = pickString(body, 'Transcription', 'transcription');
-    const formattedTranscript = formatTranscriptWithSpeakers(rawTranscript, {
+    const aiFields = extractCallJournalAiFields(body);
+    const formattedTranscript = formatTranscriptWithSpeakers(aiFields.transcript, {
         ...body,
         Name: contactName || pickString(body, 'Name', 'name'),
     });
 
+    logger.info(
+        `Journal AI fields: summary=${aiFields.diagnostics.summaryLen} chars, ` +
+            `transcript=${aiFields.diagnostics.transcriptLen} chars, ` +
+            `renderedJournal=${aiFields.diagnostics.renderedJournalLen} chars, ` +
+            `recording=${aiFields.diagnostics.hasRecording}`
+    );
+
+    if (!aiFields.diagnostics.summaryLen && !aiFields.diagnostics.transcriptLen) {
+        logger.warn(
+            'Journal received no AI summary or transcription from 3CX — check call recording + transcription settings and CRM journaling text includes [Summary] and [Transcription]'
+        );
+    }
+
     const subject = buildTaskSubject(body, contactName, 'Call');
-    const note = buildCallTaskNote(body, contactName, staff, matter, formattedTranscript);
+    const note = buildCallTaskNote(body, contactName, staff, matter, aiFields, formattedTranscript);
     const isoDuration = durationToIso8601(pickString(body, 'Duration', 'duration'));
 
     const task = {

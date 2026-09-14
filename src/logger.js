@@ -19,6 +19,8 @@ class MemoryTransport extends winston.Transport {
             msg.includes('3CX journal') ||
             msg.includes('journal skipped') ||
             msg.includes('Smokeball task') ||
+            msg.includes('Journal AI fields') ||
+            msg.includes('Journal received no AI') ||
             msg.includes('Smokeball phone search') ||
             msg.includes('Match found') ||
             msg.includes('No Smokeball contact');

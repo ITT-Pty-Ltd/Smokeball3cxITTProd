@@ -196,7 +196,8 @@ router.post('/journal', async (req, res) => {
         return res.status(401).json({ error: 'Missing access token in Authorization header.' });
     }
 
-    logger.info('3CX journal received', req.body);
+    const journalKeys = Object.keys(req.body || {}).sort().join(', ');
+    logger.info(`3CX journal received (keys: ${journalKeys || 'none'})`);
 
     try {
         const result = await processCallJournal(token, req.body);

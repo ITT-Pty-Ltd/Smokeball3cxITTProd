@@ -86,7 +86,18 @@ function resolveSpeakerLabel(rawSpeaker, aliases) {
  * Parse common 3CX / AI transcript shapes into [{ speaker, text }].
  */
 function parseTranscriptTurns(raw) {
-    if (!raw || !String(raw).trim()) return [];
+    if (!raw) return [];
+
+    if (Array.isArray(raw)) {
+        return raw
+            .map((item) => ({
+                speaker: item.speaker || item.name || item.role || item.Speaker || '',
+                text: item.text || item.utterance || item.message || item.content || '',
+            }))
+            .filter((t) => t.text);
+    }
+
+    if (!String(raw).trim()) return [];
 
     const text = String(raw).replace(/\r\n/g, '\n').trim();
 
@@ -133,7 +144,9 @@ function parseTranscriptTurns(raw) {
  * Return a speaker-labeled transcript string for task notes.
  */
 function formatTranscriptWithSpeakers(rawTranscription, payload = {}) {
-    if (!rawTranscription || !String(rawTranscription).trim()) return '';
+    if (!rawTranscription) return '';
+    if (Array.isArray(rawTranscription) && !rawTranscription.length) return '';
+    if (!Array.isArray(rawTranscription) && !String(rawTranscription).trim()) return '';
 
     const { aliases, agentName, contactName } = buildSpeakerAliases(payload);
     const turns = parseTranscriptTurns(rawTranscription);
