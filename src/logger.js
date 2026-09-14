@@ -13,8 +13,17 @@ class MemoryTransport extends winston.Transport {
             msg.includes('Authentication') ||
             msg.includes('Server listening') ||
             msg.includes('Stateless');
+        const isCrmLog =
+            msg.includes('3CX lookup') ||
+            msg.includes('3CX search') ||
+            msg.includes('3CX journal') ||
+            msg.includes('journal skipped') ||
+            msg.includes('Smokeball task') ||
+            msg.includes('Smokeball phone search') ||
+            msg.includes('Match found') ||
+            msg.includes('No Smokeball contact');
 
-        if (isError || isApiHit || isAuthLog) {
+        if (isError || isApiHit || isAuthLog || isCrmLog) {
             logHistory.push({
                 timestamp: info.timestamp || new Date().toISOString(),
                 level: info.level,

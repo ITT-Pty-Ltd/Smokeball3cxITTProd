@@ -45,6 +45,11 @@ function buildPhoneSearchTerms(phoneNumber) {
     if (digits.startsWith('61') && digits.length > 10) {
         const local = digits.slice(2);
         addDigits(local);
+        // AU numbers in Smokeball are usually stored with a leading 0 (e.g. 0290115974).
+        // +61290115974 → 290115974 without this; search misses the contact.
+        if (!local.startsWith('0')) {
+            addDigits(`0${local}`);
+        }
         if (local.length >= 8) addDigits(local.slice(-8));
     }
 
