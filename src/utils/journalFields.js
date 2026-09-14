@@ -47,14 +47,25 @@ function pickJournalValue(body, ...keys) {
     return '';
 }
 
+const SECTION_LABELS =
+    'Summary|Transcription|Recording|Sentiment|Notes|Action Items|Score|Call type|Direction';
+
 function extractSection(text, label) {
     if (!text) return '';
+    // 3CX may use single or double line breaks between sections in RenderedJournal.
     const pattern = new RegExp(
-        `(?:^|\\n)${label}\\s*:\\s*([\\s\\S]*?)(?=\\n\\n(?:Summary|Transcription|Recording|Sentiment|Notes|Action Items)\\s*:|$)`,
+        `(?:^|\\n)${label}\\s*:\\s*([\\s\\S]*?)(?=\\n+?(?:${SECTION_LABELS})\\s*:|$)`,
         'i'
     );
     const match = String(text).match(pattern);
     return match?.[1]?.trim() || '';
+}
+
+function redactRecordingUrls(text) {
+    return String(text || '').replace(
+        /https?:\/\/[^\s]+/gi,
+        '[recording-url]'
+    );
 }
 
 function extractFromRenderedJournal(text) {
@@ -173,5 +184,6 @@ module.exports = {
     extractCallJournalAiFields,
     extractFromRenderedJournal,
     truncateTaskNote,
+    redactRecordingUrls,
     SMOKEBALL_TASK_NOTE_LIMIT,
 };

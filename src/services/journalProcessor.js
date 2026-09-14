@@ -4,7 +4,11 @@ const contactCache = require('../utils/contactCache');
 const { resolveStaffForAgent, staffDisplayName } = require('../utils/staffLookup');
 const { resolveMatterForContact, matterDisplayName } = require('../utils/matterLookup');
 const { formatTranscriptWithSpeakers } = require('../utils/transcriptFormat');
-const { extractCallJournalAiFields, truncateTaskNote } = require('../utils/journalFields');
+const {
+    extractCallJournalAiFields,
+    truncateTaskNote,
+    redactRecordingUrls,
+} = require('../utils/journalFields');
 const { durationToMinutes, durationToIso8601 } = require('../utils/duration');
 const { formatApiError } = require('../utils/formatApiError');
 const { logger } = require('../logger');
@@ -63,7 +67,12 @@ function buildCallTaskNote(payload, contactName, staff, matter, aiFields, format
     appendSection(lines, 'Summary', aiFields.summary);
     appendSection(lines, 'Notes', aiFields.aiNotes);
     appendSection(lines, 'Action items', aiFields.actionItems);
-    appendSection(lines, 'Transcription', formattedTranscript);
+    const transcriptForNote =
+        formattedTranscript ||
+        (!aiFields.summary && aiFields.recordingUrl
+            ? '(3CX did not send a transcript for this call. Open the recording in the 3CX web client — if transcription is missing there too, enable AI transcription on the extension and its department/queue, then restart the 3CX System Service.)'
+            : '');
+    appendSection(lines, 'Transcription', transcriptForNote);
     appendSection(lines, 'Sentiment', aiFields.sentiment);
     appendSection(lines, 'Recording', aiFields.recordingUrl);
 
@@ -292,9 +301,13 @@ async function processCallJournal(accessToken, body) {
     );
 
     if (!aiFields.diagnostics.summaryLen && !aiFields.diagnostics.transcriptLen) {
+        const preview = redactRecordingUrls(aiFields.renderedJournal).slice(0, 280);
         logger.warn(
             'Journal received no AI summary or transcription from 3CX — check call recording + transcription settings and CRM journaling text includes [Summary] and [Transcription]'
         );
+        if (preview) {
+            logger.warn(`Journal RenderedJournal preview: ${preview}`);
+        }
     }
 
     const subject = buildTaskSubject(body, contactName, 'Call');
