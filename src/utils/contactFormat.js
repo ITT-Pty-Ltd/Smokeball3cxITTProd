@@ -3,10 +3,7 @@
  * Avoids "Company - Company" display when organisation contacts use company for both fields.
  */
 
-function getDigitsFromPhoneObj(phoneObj) {
-    if (!phoneObj) return '';
-    return `${phoneObj.areaCode || ''}${phoneObj.number || ''}`.replace(/\D/g, '');
-}
+const { getDigitsFromPhoneObj, phoneDigitsMatch } = require('./phoneNormalize');
 
 function formatPhoneDisplay(phoneObj) {
     if (!phoneObj) return '';
@@ -31,11 +28,8 @@ function formatContactFor3cx(contact, dialNumber) {
 
     // Ensure the dialled/searched number appears on at least one 3CX phone field (phonebook sync)
     if (dialNumber) {
-        const dialDigits = String(dialNumber).replace(/\D/g, '');
-        const known = [phoneMobile, phoneBusiness, phoneBusiness2].map((p) => p.replace(/\D/g, ''));
-        const alreadyPresent = known.some(
-            (d) => d && dialDigits && (d.endsWith(dialDigits) || dialDigits.endsWith(d))
-        );
+        const known = [phoneMobile, phoneBusiness, phoneBusiness2];
+        const alreadyPresent = known.some((p) => p && phoneDigitsMatch(dialNumber, p));
         if (!alreadyPresent) {
             if (!phoneMobile) phoneMobile = dialNumber;
             else if (!phoneBusiness) phoneBusiness = dialNumber;

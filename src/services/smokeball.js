@@ -2,65 +2,12 @@ const axios = require('axios');
 const config = require('../config');
 const { requestWithRetry } = require('../utils/httpRetry');
 const { logger } = require('../logger');
+const {
+    phoneMatchesContact,
+    buildPhoneSearchTerms,
+} = require('../utils/phoneNormalize');
 
 const { maxRetries, retryBaseDelayMs, searchResultLimit } = config.smokeball;
-
-function getDigitsFromPhoneObj(phoneObj) {
-    if (!phoneObj) return '';
-    return `${phoneObj.areaCode || ''}${phoneObj.number || ''}`.replace(/\D/g, '');
-}
-
-function phoneMatches(normalisedInput, contact) {
-    if (!normalisedInput) return false;
-
-    const suffixMatch = (digits) =>
-        digits && (digits.endsWith(normalisedInput) || normalisedInput.endsWith(digits));
-
-    if (contact.person) {
-        for (const ph of [contact.person.phone, contact.person.phone2, contact.person.cell]) {
-            if (suffixMatch(getDigitsFromPhoneObj(ph))) return true;
-        }
-    }
-
-    if (contact.company?.phone && suffixMatch(getDigitsFromPhoneObj(contact.company.phone))) {
-        return true;
-    }
-
-    return false;
-}
-
-/** Build Smokeball Search terms (phone:*value*) for progressive lookup attempts. */
-function buildPhoneSearchTerms(phoneNumber) {
-    const digits = phoneNumber.replace(/\D/g, '');
-    const candidates = [];
-
-    const addDigits = (d) => {
-        if (d && d.length >= 4) candidates.push(d);
-    };
-
-    addDigits(digits);
-    if (digits.length >= 8) addDigits(digits.slice(-8));
-    if (digits.length >= 6) addDigits(digits.slice(-6));
-
-    if (digits.startsWith('61') && digits.length > 10) {
-        const local = digits.slice(2);
-        addDigits(local);
-        // AU numbers in Smokeball are usually stored with a leading 0 (e.g. 0290115974).
-        // +61290115974 → 290115974 without this; search misses the contact.
-        if (!local.startsWith('0')) {
-            addDigits(`0${local}`);
-        }
-        if (local.length >= 8) addDigits(local.slice(-8));
-    }
-
-    if (digits.startsWith('0') && digits.length > 1) {
-        const local = digits.slice(1);
-        addDigits(local);
-        if (local.length >= 8) addDigits(local.slice(-8));
-    }
-
-    return [...new Set(candidates.map((d) => `phone:*${d}*`))];
-}
 
 /** Prefer the contact Smokeball updated most recently when several share a phone number. */
 function pickBestContactMatch(matches) {
@@ -255,7 +202,6 @@ class SmokeballService {
      * Re-fetches by ID so 3CX always gets current name/details from Smokeball.
      */
     async searchContactByPhone(accessToken, phoneNumber) {
-        const normalised = phoneNumber.replace(/\D/g, '');
         const searchTerms = buildPhoneSearchTerms(phoneNumber);
         const matches = [];
 
@@ -264,10 +210,22 @@ class SmokeballService {
             const page = await this.searchContacts(accessToken, [term]);
             const contacts = page.value || [];
 
+            if (contacts.length) {
+                logger.info(
+                    `Smokeball phone search returned ${contacts.length} candidate(s) for ${term}`
+                );
+            }
+
             for (const contact of contacts) {
-                if (phoneMatches(normalised, contact)) {
+                if (phoneMatchesContact(phoneNumber, contact)) {
                     matches.push(contact);
                 }
+            }
+
+            if (contacts.length && !matches.length) {
+                logger.warn(
+                    `Smokeball phone search: ${contacts.length} result(s) for ${term} did not match phone ${phoneNumber}`
+                );
             }
 
             if (matches.length) break;
