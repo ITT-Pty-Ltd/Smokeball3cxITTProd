@@ -2,6 +2,8 @@
 
 Node.js middleware that connects **3CX Phone System** to **Smokeball** (Australian legal practice management CRM). It handles OAuth on behalf of the PBX, looks up contacts by phone number for caller ID, and can receive call journal events from 3CX.
 
+**Documentation:** [Architecture](docs/ARCHITECTURE.md) | [Administration](docs/ADMINISTRATION.md)
+
 ---
 
 ## Overview
@@ -186,7 +188,7 @@ Creates a Smokeball task (matter-linked when possible) with the full `[ChatMessa
 
 ### 3CX prerequisites
 
-- Re-upload `3cx_smokeball_template_fixed.xml` (**Version 5**).
+- Re-upload `3cx_smokeball_template_fixed.xml` (current **Version 7**; see [Administration](docs/ADMINISTRATION.md)).
 - Enable **Call Journaling** / **Chat Journaling** as needed.
 - Ensure each extension has **email** and **name** (staff lookup).
 - Enable call recording + AI transcription for transcript/summary fields.
