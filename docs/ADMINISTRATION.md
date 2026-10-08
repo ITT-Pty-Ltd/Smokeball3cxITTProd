@@ -50,6 +50,8 @@ This guide is for **IT administrators**, **3CX administrators**, and **Smokeball
 
 ## 3. Initial deployment checklist
 
+For **multiple firms in production**, use one Web App per firm: [MULTI_FIRM_DEPLOYMENT.md](./MULTI_FIRM_DEPLOYMENT.md).
+
 ### 3.1 Deploy the middleware
 
 1. Create Azure Web App (Linux, Node 20) or use existing ITT deployment.

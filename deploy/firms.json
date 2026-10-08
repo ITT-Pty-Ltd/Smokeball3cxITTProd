@@ -1,0 +1,22 @@
+{
+  "firms": [
+    {
+      "id": "itt-demo",
+      "displayName": "ITT Demo / Nadun Testing",
+      "azureWebAppName": "smokeball3cx",
+      "publicUrl": "https://smokeball3cx-edemambpcpdhgqc9.australiaeast-01.azurewebsites.net",
+      "githubEnvironment": "Production",
+      "smokeballApiUrl": "https://stagingapi.smokeball.com.au",
+      "smokeballAuthUrl": "https://datastaging-auth.smokeball.com.au"
+    },
+    {
+      "id": "hanna-lawyers",
+      "displayName": "Hanna Lawyers",
+      "azureWebAppName": "smokeball3cx-hanna-lawyers",
+      "publicUrl": "",
+      "githubEnvironment": "HannaLawyers",
+      "smokeballApiUrl": "https://api.smokeball.com.au",
+      "smokeballAuthUrl": "https://auth.smokeball.com.au"
+    }
+  ]
+}

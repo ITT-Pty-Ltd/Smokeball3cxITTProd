@@ -32,7 +32,7 @@ The middleware is a **stateless HTTP service** (Node.js / Express) deployed on a
 
 - Replacing Smokeball or 3CX administration UIs
 - Storing call recordings or transcripts (3CX sends text in journal payloads; recordings stay on the PBX)
-- Multi-tenant routing inside one deployment (current design: one set of Smokeball OAuth credentials per deployment)
+- Multi-tenant routing inside one deployment (production uses **one Web App per firm**; see [MULTI_FIRM_DEPLOYMENT.md](./MULTI_FIRM_DEPLOYMENT.md))
 - Direct browser access to Smokeball contact URLs (API routes require Bearer tokens)
 
 ---
@@ -193,9 +193,9 @@ Journal flags are evaluated in `shouldSkipJournal()` before any Smokeball write.
 
 | Layer | Typical choice |
 |-------|----------------|
-| Host | Azure App Service Linux, Node 20 LTS |
-| CI/CD | GitHub Actions (`.github/workflows/main.yml`) on push to `main` / `master` |
-| Secrets | Azure Application Settings (mirror `.env`, never commit `.env`) |
+| Host | Azure App Service Linux, Node 20 LTS (one app per firm) |
+| CI/CD | GitHub Actions matrix deploy from `deploy/firms.json` |
+| Secrets | Azure Application Settings per firm (`deploy/firms/<id>.env`, gitignored) |
 | Health | `GET /api/status` |
 | Logs | Winston to stdout plus ring buffer exposed at `GET /api/logs` (CRM-related lines only) |
 

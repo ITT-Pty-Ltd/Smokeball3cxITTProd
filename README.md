@@ -2,7 +2,7 @@
 
 Node.js middleware that connects **3CX Phone System** to **Smokeball** (Australian legal practice management CRM). It handles OAuth on behalf of the PBX, looks up contacts by phone number for caller ID, and can receive call journal events from 3CX.
 
-**Documentation:** [Architecture](docs/ARCHITECTURE.md) | [Administration](docs/ADMINISTRATION.md)
+**Documentation:** [Architecture](docs/ARCHITECTURE.md) | [Administration](docs/ADMINISTRATION.md) | [Multi-firm deployment](docs/MULTI_FIRM_DEPLOYMENT.md)
 
 ---
 
@@ -294,11 +294,11 @@ Use this checklist for each new customer (PBX + Smokeball firm).
 
 Choose one deployment per client **or** a shared multi-tenant instance (current design is single-tenant per env vars).
 
-**Option A — Shared middleware (multiple clients, same Smokeball app)**  
-Only works if all clients share the same Smokeball OAuth app credentials.
+**Option A — Shared middleware (multiple clients, one Web App)**  
+Not supported: each instance uses one `SMOKEBALL_API_KEY` and one config set.
 
 **Option B — Per-client middleware (recommended)**  
-Deploy a separate Azure Web App (or App Service instance) per client with their own env vars.
+One Azure Web App per firm; register in `deploy/firms.json`. See [Multi-firm deployment](docs/MULTI_FIRM_DEPLOYMENT.md).
 
 | Setting | What to set |
 |---------|-------------|

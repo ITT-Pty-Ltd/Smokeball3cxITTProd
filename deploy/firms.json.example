@@ -1,0 +1,22 @@
+{
+  "firms": [
+    {
+      "id": "acme-law",
+      "displayName": "Acme Law",
+      "azureWebAppName": "smokeball3cx-acme",
+      "publicUrl": "https://smokeball3cx-acme.azurewebsites.net",
+      "githubEnvironment": "firm-acme-law",
+      "smokeballApiUrl": "https://api.smokeball.com.au",
+      "smokeballAuthUrl": "https://auth.smokeball.com.au"
+    },
+    {
+      "id": "beta-legal",
+      "displayName": "Beta Legal",
+      "azureWebAppName": "smokeball3cx-beta",
+      "publicUrl": "https://smokeball3cx-beta.azurewebsites.net",
+      "githubEnvironment": "firm-beta-legal",
+      "smokeballApiUrl": "https://api.smokeball.com.au",
+      "smokeballAuthUrl": "https://auth.smokeball.com.au"
+    }
+  ]
+}
